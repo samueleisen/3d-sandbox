@@ -9,6 +9,7 @@ const PLAYER_SPEED = 120;          // units/sec
 const PLAYER_RADIUS = 12;           // collision half-width
 const PLAYER_HEIGHT = 28;
 const EDGE_WALL_H = 20;
+const GRAVITY = 9.81;               // world gravity acceleration (m/s²)
 
 // Mutable Camera State
 let cameraType = 'persp';
@@ -29,6 +30,9 @@ const PAL = {
     playerTop: 0x5cf0a0,
     playerSide: 0x38c878,
     playerEdge: 0x2aff90,
+    playerHair: 0x3d2846,
+    playerHairHighlight: 0x5a3d66,
+    playerHairTie: 0xff4757,
     obs1Top: 0xe06050, obs1Side: 0xb84040,
     obs2Top: 0x50a0e0, obs2Side: 0x3878b0,
     obs3Top: 0xf0c840, obs3Side: 0xc8a030,

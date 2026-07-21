@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="A 2.5D interactive pixel-art style game with smooth WASD movement, orthographic camera, and real 3D depth built with Three.js.">
-    <title>2.5D Pixel World</title>
+        content="A 3D interactive game with smooth WASD movement, orthographic camera, and real 3D depth built with Three.js.">
+    <title>3D Pixel World</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -17,6 +17,20 @@
             Move
         </div>
         <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
+        <div id="perf-hud"
+            style="margin-top: 8px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 6px; font-size: 11px; pointer-events: auto;">
+            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span
+                    class="perf-avg">--</span></div>
+            <div>Spike (P99): <span class="perf-spike">--</span> &nbsp;|&nbsp; &Delta;: <span
+                    class="perf-diff">--</span></div>
+            <div style="margin-top: 4px; display: flex; gap: 4px;">
+                <button id="btn-set-baseline"
+                    style="background: rgba(200,255,200,0.15); border: 1px solid rgba(200,255,200,0.3); color: #c8ffc8; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Set
+                    Baseline</button>
+                <button id="btn-reset-baseline"
+                    style="background: rgba(200,255,200,0.1); border: 1px solid rgba(200,255,200,0.2); color: #888; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Reset</button>
+            </div>
+        </div>
     </div>
 
     <div id="camera-panel">
@@ -55,6 +69,7 @@
 
     <!-- Foundation -->
     <script src="js/constants.js"></script>
+    <script src="js/perfBuffer.js"></script>
     <script src="js/scene.js"></script>
 
     <!-- World & Textures -->
@@ -69,6 +84,7 @@
     <script src="js/player.js"></script>
     <script src="js/input.js"></script>
     <script src="js/collision.js"></script>
+    <script src="js/playerController.js"></script>
     <script src="js/camera.js"></script>
 
     <!-- Game Loop -->

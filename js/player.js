@@ -14,6 +14,11 @@ const rightArmBone = new THREE.Bone(); rightArmBone.name = 'RightArm';
 const leftLegBone  = new THREE.Bone(); leftLegBone.name  = 'LeftLeg';
 const rightLegBone = new THREE.Bone(); rightLegBone.name = 'RightLeg';
 
+// Dynamic Long Ponytail bones
+const ponyBaseBone = new THREE.Bone(); ponyBaseBone.name = 'PonyBase';
+const ponyMidBone  = new THREE.Bone(); ponyMidBone.name  = 'PonyMid';
+const ponyTipBone  = new THREE.Bone(); ponyTipBone.name  = 'PonyTip';
+
 hipsBone.add(spineBone);
 spineBone.add(headBone);
 spineBone.add(leftArmBone);
@@ -21,8 +26,11 @@ spineBone.add(rightArmBone);
 hipsBone.add(leftLegBone);
 hipsBone.add(rightLegBone);
 
+headBone.add(ponyBaseBone);
+ponyBaseBone.add(ponyMidBone);
+ponyMidBone.add(ponyTipBone);
+
 // Rest-pose positions (local, relative to parent bone)
-// Rest-pose positions (local, relative to parent bone) - scaled down by 50%
 hipsBone.position.set(0, 10, 0);
 spineBone.position.set(0, 0, 0);
 headBone.position.set(0, 8, 0);
@@ -31,12 +39,18 @@ rightArmBone.position.set(4, 7, 0);
 leftLegBone.position.set(-2, 0, 0);
 rightLegBone.position.set(2, 0, 0);
 
+// Ponytail attached to upper-rear of sphere head
+ponyBaseBone.position.set(0, 7.5, -5.2);
+ponyMidBone.position.set(0, -4.0, -0.5);
+ponyTipBone.position.set(0, -4.5, -0.5);
+
 playerGroup.add(hipsBone);
 
 // ── Skeleton (formal binding) ──────────────────
 const skeleton = new THREE.Skeleton([
     hipsBone, spineBone, headBone,
-    leftArmBone, rightArmBone, leftLegBone, rightLegBone
+    leftArmBone, rightArmBone, leftLegBone, rightLegBone,
+    ponyBaseBone, ponyMidBone, ponyTipBone
 ]);
 
 // ── Visual Meshes & Edge Outlines ──────────────
@@ -57,10 +71,46 @@ function attachPart(bone, geometry, color, localPos) {
 
 const _v = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// Head — ball (UNTOUCHED size: radius 6)
+// Head — ball (radius 6)
 attachPart(headBone,
     new THREE.SphereGeometry(6, 8, 6),
     PAL.playerTop, _v(0, 5, 0));
+
+// Hair Cap — fitted over top & rear of ball head
+attachPart(headBone,
+    new THREE.SphereGeometry(6.3, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    PAL.playerHair, _v(0, 5, 0));
+
+// Stylized Bangs / Fringe
+attachPart(headBone,
+    new THREE.CylinderGeometry(1.2, 0.2, 3.5, 5),
+    PAL.playerHairHighlight, _v(-1.8, 6.2, 3.8));
+attachPart(headBone,
+    new THREE.CylinderGeometry(1.2, 0.2, 3.5, 5),
+    PAL.playerHairHighlight, _v(1.8, 6.2, 3.8));
+attachPart(headBone,
+    new THREE.CylinderGeometry(1.4, 0.3, 4, 5),
+    PAL.playerHair, _v(0, 6.5, 4.2));
+
+// Hair Tie (Scrunchie)
+attachPart(ponyBaseBone,
+    new THREE.SphereGeometry(1.4, 8, 6),
+    PAL.playerHairTie, _v(0, 0, 0));
+
+// Ponytail Upper Strand Segment
+attachPart(ponyBaseBone,
+    new THREE.CylinderGeometry(1.3, 1.0, 4.5, 6),
+    PAL.playerHair, _v(0, -2.25, -0.2));
+
+// Ponytail Mid Strand Segment
+attachPart(ponyMidBone,
+    new THREE.CylinderGeometry(1.0, 0.7, 5.0, 6),
+    PAL.playerHair, _v(0, -2.5, -0.2));
+
+// Ponytail Tip Segment
+attachPart(ponyTipBone,
+    new THREE.ConeGeometry(0.7, 5.0, 6),
+    PAL.playerHairHighlight, _v(0, -2.5, -0.2));
 
 // Torso — rounded tube / capsule body (50% smaller)
 attachPart(spineBone,
