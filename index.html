@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A 2.5D interactive pixel-art style game with smooth WASD movement, orthographic camera, and real 3D depth built with Three.js.">
+    <title>2.5D Pixel World</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="ui-overlay">
+        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+            Move
+        </div>
+        <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
+    </div>
+
+    <div id="camera-panel">
+        <h3>Camera Controls</h3>
+
+        <div class="control-group">
+            <label>Camera Projection</label>
+            <select id="ctrl-type">
+                <option value="persp" selected>Perspective (Real Depth)</option>
+                <option value="ortho">Orthographic (Flat 2D)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Tilt Angle: <span id="val-tilt" class="control-value">45°</span></label>
+            <input type="range" id="ctrl-tilt" min="5" max="85" value="45">
+        </div>
+
+        <div class="control-group">
+            <label>Camera Height: <span id="val-height" class="control-value">450</span></label>
+            <input type="range" id="ctrl-height" min="150" max="900" value="450">
+        </div>
+
+        <div class="control-group" id="group-fov">
+            <label>Field of View: <span id="val-fov" class="control-value">50°</span></label>
+            <input type="range" id="ctrl-fov" min="20" max="100" value="50">
+        </div>
+
+        <div class="control-group" id="group-size" style="display: none;">
+            <label>Ortho View Size: <span id="val-size" class="control-value">420</span></label>
+            <input type="range" id="ctrl-size" min="150" max="800" value="420">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Foundation -->
+    <script src="js/constants.js"></script>
+    <script src="js/scene.js"></script>
+
+    <!-- World & Textures -->
+    <script src="js/world.js"></script>
+    <script src="js/textures.js"></script>
+    <script src="js/trees.js"></script>
+    <script src="js/flowers.js"></script>
+    <script src="js/houses.js"></script>
+    <script src="js/scenePlacement.js"></script>
+
+    <!-- Character & Systems -->
+    <script src="js/player.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/collision.js"></script>
+    <script src="js/camera.js"></script>
+
+    <!-- Game Loop -->
+    <script src="js/loop.js"></script>
+</body>
+
+</html>
