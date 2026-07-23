@@ -33,10 +33,12 @@ pShadow.position.y = 0.6;
 scene.add(pShadow);
 
 // ── Animation state ───────────────────────────────────────────
-let mixer      = null;
+let mixer = null;
 let idleAction = null;   // Hero-Idle  (plays by default)
 let walkAction = null;   // Hero-Walk  (fades in while moving)
-let isWalking  = false;
+let jumpAction = null;   // Hero-Jump  (plays during jump)
+let isWalking = false;
+let isGrounded = true;   // Grounded status flag
 
 /** All clips in the GLB, keyed by lowercased clip name. */
 const animations = {};
@@ -59,7 +61,7 @@ _loader.load(
         const model = gltf.scene;
 
         // 1. Auto-scale to PLAYER_HEIGHT
-        const box  = new THREE.Box3().setFromObject(model);
+        const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
         if (size.y > 0) model.scale.setScalar(PLAYER_HEIGHT / size.y);
@@ -72,9 +74,9 @@ _loader.load(
             }
         });
 
-        // 3. Sit the model's feet exactly on y = 0
+        // 3. Sit the model's feet cleanly on top of y = 0 with ground clearance offset
         const box2 = new THREE.Box3().setFromObject(model);
-        model.position.y = -box2.min.y;
+        model.position.y = -box2.min.y + 5.0;
 
         playerGroup.add(model);
 
@@ -91,8 +93,14 @@ _loader.load(
             // Named shortcuts for the confirmed clip names
             idleAction = animations['hero-idle'] || Object.values(animations)[0];
             walkAction = animations['hero-walk'] || null;
+            jumpAction = animations['hero-jump'] || null;
 
-            // Start idle immediately at weight 1 — walk will cross-fade over it
+            if (jumpAction) {
+                jumpAction.setLoop(THREE.LoopOnce);
+                jumpAction.clampWhenFinished = true;
+            }
+
+            // Start idle immediately at weight 1 — walk/jump will cross-fade over it
             if (idleAction) idleAction.play();
         }
 

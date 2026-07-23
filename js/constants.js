@@ -5,10 +5,14 @@ const WORLD_WIDTH = 1200;
 const WORLD_DEPTH = 600;
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
-const PLAYER_SPEED = 120;          // units/sec
+const PLAYER_SPEED = 120;          // units/sec max speed
+const PLAYER_ACCEL = 1200;          // units/sec² acceleration
+const PLAYER_FRICTION = 16;         // deceleration damping factor
 const PLAYER_RADIUS = 12;           // collision half-width
 const PLAYER_HEIGHT = 28;
 const EDGE_WALL_H = 20;
+const JUMP_POWER = 150;           // initial vertical jump velocity (units/sec)
+const JUMP_GRAVITY = 180;         // gravity acceleration (units/sec²) — 40 frames / 1.6667s airtime
 const GRAVITY = 9.81;               // world gravity acceleration (m/s²)
 
 // Mutable Camera State

@@ -89,9 +89,11 @@ function animate() {
         if (f.line) f.line.position.copy(f.mesh.position);
     });
 
-    /* ── Camera tracking (always centered on player) ── */
+    /* ── Camera tracking (centered on player X, Y, Z) ── */
     const px = playerGroup.position.x;
+    const py = playerGroup.position.y;
     const pz = playerGroup.position.z;
+
     camTargetX = px;
     camTargetZ = pz;
 
@@ -99,10 +101,10 @@ function animate() {
     const camOffsetY  = camHeight * Math.cos(camAngleRad);
     const camOffsetZ  = camHeight * Math.sin(camAngleRad);
 
-    camera.position.x = camTargetX;
-    camera.position.y = camOffsetY;
-    camera.position.z = camTargetZ + camOffsetZ;
-    camera.lookAt(camTargetX, 0, camTargetZ);
+    camera.position.x = px;
+    camera.position.y = py + camOffsetY;
+    camera.position.z = pz + camOffsetZ;
+    camera.lookAt(px, py, pz);
 
     /* ── HUD ── */
     coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)}`;
