@@ -31,8 +31,10 @@ function animate() {
             item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.5 + item.phaseOffset) * 0.04;
             // Subtle vertical bob
             item.mesh.position.y = item.oy + Math.sin(time * item.speed * 0.3 + item.phaseOffset) * 0.8 * item.baseScale;
-            item.line.rotation.copy(item.mesh.rotation);
-            item.line.position.copy(item.mesh.position);
+            if (item.line) {
+                item.line.rotation.copy(item.mesh.rotation);
+                item.line.position.copy(item.mesh.position);
+            }
         } else if (item.isVertPlane) {
             // For vertical cross-planes: translate/rotate sway to match the wind
             const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.8 * item.baseScale;
@@ -42,18 +44,20 @@ function animate() {
             item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.35 + item.phaseOffset) * 0.03;
 
             item.mesh.position.set(item.px + swayX, item.oy, item.pz + swayZ);
-            item.line.rotation.copy(item.mesh.rotation);
-            item.line.position.copy(item.mesh.position);
+            if (item.line) {
+                item.line.rotation.copy(item.mesh.rotation);
+                item.line.position.copy(item.mesh.position);
+            }
         } else {
             // Legacy sphere/bush sway (scale-based)
             const currentScale = item.baseScale * (1.0 + wobble * 0.04);
             item.mesh.scale.set(currentScale, currentScale, currentScale);
-            item.line.scale.set(currentScale, currentScale, currentScale);
+            if (item.line) item.line.scale.set(currentScale, currentScale, currentScale);
 
             const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
             const swayZ = Math.sin(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
             item.mesh.position.set(item.px + item.ox + swayX, item.trunkHeight + item.oy, item.pz + item.oz + swayZ);
-            item.line.position.copy(item.mesh.position);
+            if (item.line) item.line.position.copy(item.mesh.position);
         }
     });
 
@@ -82,7 +86,7 @@ function animate() {
     animFlowers.forEach(f => {
         const sway = Math.sin(time * f.speed + f.phaseOffset) * 0.8 * f.scale;
         f.mesh.position.x = f.baseX + sway;
-        f.line.position.copy(f.mesh.position);
+        if (f.line) f.line.position.copy(f.mesh.position);
     });
 
     /* ── Camera tracking (always centered on player) ── */

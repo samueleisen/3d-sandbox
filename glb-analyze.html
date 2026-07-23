@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GLB Analyzer — HeroMC-Animation</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 24px; }
+    h2   { color: #58a6ff; }
+    h3   { color: #79c0ff; margin-top: 20px; }
+    pre  { background: #161b22; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+    .ok  { color: #3fb950; }
+    .err { color: #f85149; }
+    .dim { color: #6e7681; }
+  </style>
+</head>
+<body>
+  <h2>GLB Analyzer — HeroMC-Animation.glb</h2>
+  <pre id="out">Loading…</pre>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script>
+    const out = document.getElementById('out');
+    const log = s => { out.textContent += s + '\n'; };
+
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      'HeroMC-Animation.glb',
+
+      function (gltf) {
+        log('✅ Loaded OK\n');
+
+        // ── Animations ──────────────────────────────────────────
+        log('━━━ ANIMATIONS (' + gltf.animations.length + ') ━━━');
+        if (gltf.animations.length === 0) {
+          log('  (none)');
+        } else {
+          gltf.animations.forEach(function (clip, i) {
+            log('  [' + i + '] name: "' + clip.name + '"  duration: ' + clip.duration.toFixed(3) + 's  tracks: ' + clip.tracks.length);
+            clip.tracks.forEach(function (t) {
+              log('       track: ' + t.name);
+            });
+          });
+        }
+
+        // ── Hierarchy: bones + meshes ───────────────────────────
+        log('\n━━━ SCENE NODES ━━━');
+        const bones  = [];
+        const meshes = [];
+
+        gltf.scene.traverse(function (node) {
+          if (node.isBone) bones.push(node.name);
+          if (node.isMesh) meshes.push({ name: node.name, skinned: node.isSkinnedMesh });
+        });
+
+        log('  Bones  (' + bones.length + '):');
+        bones.forEach(function (n) { log('    ' + n); });
+
+        log('\n  Meshes (' + meshes.length + '):');
+        meshes.forEach(function (m) {
+          log('    ' + m.name + (m.skinned ? '  [SkinnedMesh]' : '  [Mesh]'));
+        });
+
+        // ── Bounding box ────────────────────────────────────────
+        const box  = new THREE.Box3().setFromObject(gltf.scene);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        log('\n━━━ BOUNDING BOX ━━━');
+        log('  size:  x=' + size.x.toFixed(2) + '  y=' + size.y.toFixed(2) + '  z=' + size.z.toFixed(2));
+        log('  min.y: ' + box.min.y.toFixed(3) + '  max.y: ' + box.max.y.toFixed(3));
+      },
+
+      function (xhr) {
+        if (xhr.total) out.textContent = 'Loading: ' + Math.round(xhr.loaded / xhr.total * 100) + '%';
+      },
+
+      function (err) {
+        out.textContent = '❌ Error: ' + err;
+        out.className   = 'err';
+      }
+    );
+  </script>
+</body>
+</html>

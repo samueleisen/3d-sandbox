@@ -1,195 +1,117 @@
 /* ───────────────────────────────────────────────
-    PLAYER  (Skinned Low-Poly Humanoid)
-    Bone hierarchy · visual meshes · AnimationClip · Mixer
-    Depends on: scene, PAL, PLAYER_RADIUS
+    PLAYER  (HeroMC-Animation.glb)
+    Loads the GLB, auto-scales to PLAYER_HEIGHT,
+    centres it on the ground, sets up AnimationMixer.
+
+    Exposes globals consumed by playerController.js & loop.js:
+      playerGroup  — THREE.Group the model lives inside
+      pShadow      — flat shadow disc in the scene
+      mixer        — THREE.AnimationMixer (null until GLB loads)
+      animations   — { [clipNameLower]: AnimationAction } map
+      idleAction   — Hero-Idle clip action
+      walkAction   — Hero-Walk clip action
+      isWalking    — bool, toggled by playerController
+      glbReady     — bool, true once load + setup is done
+
+    Clip names in GLB (confirmed via Babylon.js inspector):
+      "Hero-Idle"  "Hero-Walk"  "Hero-Jump"
+
+    Depends on: scene, PAL, PLAYER_RADIUS, PLAYER_HEIGHT
 ─────────────────────────────────────────────── */
+
+// ── Player container ─────────────────────────────────────────
 const playerGroup = new THREE.Group();
-
-// ── Bone Hierarchy ──────────────────────────────
-const hipsBone     = new THREE.Bone(); hipsBone.name     = 'Hips';
-const spineBone    = new THREE.Bone(); spineBone.name    = 'Spine';
-const headBone     = new THREE.Bone(); headBone.name     = 'Head';
-const leftArmBone  = new THREE.Bone(); leftArmBone.name  = 'LeftArm';
-const rightArmBone = new THREE.Bone(); rightArmBone.name = 'RightArm';
-const leftLegBone  = new THREE.Bone(); leftLegBone.name  = 'LeftLeg';
-const rightLegBone = new THREE.Bone(); rightLegBone.name = 'RightLeg';
-
-// Dynamic Long Ponytail bones
-const ponyBaseBone = new THREE.Bone(); ponyBaseBone.name = 'PonyBase';
-const ponyMidBone  = new THREE.Bone(); ponyMidBone.name  = 'PonyMid';
-const ponyTipBone  = new THREE.Bone(); ponyTipBone.name  = 'PonyTip';
-
-hipsBone.add(spineBone);
-spineBone.add(headBone);
-spineBone.add(leftArmBone);
-spineBone.add(rightArmBone);
-hipsBone.add(leftLegBone);
-hipsBone.add(rightLegBone);
-
-headBone.add(ponyBaseBone);
-ponyBaseBone.add(ponyMidBone);
-ponyMidBone.add(ponyTipBone);
-
-// Rest-pose positions (local, relative to parent bone)
-hipsBone.position.set(0, 10, 0);
-spineBone.position.set(0, 0, 0);
-headBone.position.set(0, 8, 0);
-leftArmBone.position.set(-4, 7, 0);
-rightArmBone.position.set(4, 7, 0);
-leftLegBone.position.set(-2, 0, 0);
-rightLegBone.position.set(2, 0, 0);
-
-// Ponytail attached to upper-rear of sphere head
-ponyBaseBone.position.set(0, 7.5, -5.2);
-ponyMidBone.position.set(0, -4.0, -0.5);
-ponyTipBone.position.set(0, -4.5, -0.5);
-
-playerGroup.add(hipsBone);
-
-// ── Skeleton (formal binding) ──────────────────
-const skeleton = new THREE.Skeleton([
-    hipsBone, spineBone, headBone,
-    leftArmBone, rightArmBone, leftLegBone, rightLegBone,
-    ponyBaseBone, ponyMidBone, ponyTipBone
-]);
-
-// ── Visual Meshes & Edge Outlines ──────────────
-const _edgeMat = new THREE.LineBasicMaterial({
-    color: PAL.playerEdge, transparent: true, opacity: 0.6
-});
-
-function attachPart(bone, geometry, color, localPos) {
-    const mesh = new THREE.Mesh(geometry,
-        new THREE.MeshBasicMaterial({ color }));
-    mesh.position.copy(localPos);
-    bone.add(mesh);
-    const line = new THREE.LineSegments(
-        new THREE.EdgesGeometry(geometry), _edgeMat);
-    line.position.copy(localPos);
-    bone.add(line);
-}
-
-const _v = (x, y, z) => new THREE.Vector3(x, y, z);
-
-// Head — ball (radius 6)
-attachPart(headBone,
-    new THREE.SphereGeometry(6, 8, 6),
-    PAL.playerTop, _v(0, 5, 0));
-
-// Hair Cap — fitted over top & rear of ball head
-attachPart(headBone,
-    new THREE.SphereGeometry(6.3, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.58),
-    PAL.playerHair, _v(0, 5, 0));
-
-// Stylized Bangs / Fringe
-attachPart(headBone,
-    new THREE.CylinderGeometry(1.2, 0.2, 3.5, 5),
-    PAL.playerHairHighlight, _v(-1.8, 6.2, 3.8));
-attachPart(headBone,
-    new THREE.CylinderGeometry(1.2, 0.2, 3.5, 5),
-    PAL.playerHairHighlight, _v(1.8, 6.2, 3.8));
-attachPart(headBone,
-    new THREE.CylinderGeometry(1.4, 0.3, 4, 5),
-    PAL.playerHair, _v(0, 6.5, 4.2));
-
-// Hair Tie (Scrunchie)
-attachPart(ponyBaseBone,
-    new THREE.SphereGeometry(1.4, 8, 6),
-    PAL.playerHairTie, _v(0, 0, 0));
-
-// Ponytail Upper Strand Segment
-attachPart(ponyBaseBone,
-    new THREE.CylinderGeometry(1.3, 1.0, 4.5, 6),
-    PAL.playerHair, _v(0, -2.25, -0.2));
-
-// Ponytail Mid Strand Segment
-attachPart(ponyMidBone,
-    new THREE.CylinderGeometry(1.0, 0.7, 5.0, 6),
-    PAL.playerHair, _v(0, -2.5, -0.2));
-
-// Ponytail Tip Segment
-attachPart(ponyTipBone,
-    new THREE.ConeGeometry(0.7, 5.0, 6),
-    PAL.playerHairHighlight, _v(0, -2.5, -0.2));
-
-// Torso — rounded tube / capsule body (50% smaller)
-attachPart(spineBone,
-    new THREE.CylinderGeometry(3.5, 3, 7, 8),
-    PAL.playerSide, _v(0, 3.5, 0));
-attachPart(spineBone,                                              // top dome cap
-    new THREE.SphereGeometry(3.5, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
-    PAL.playerSide, _v(0, 7, 0));
-attachPart(spineBone,                                              // bottom dome cap
-    new THREE.SphereGeometry(3, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
-    PAL.playerSide, _v(0, 0, 0));
-
-// Arms — round limbs with ball hands (50% smaller)
-const armGeo  = new THREE.CylinderGeometry(1.25, 1, 5, 6);
-const handGeo = new THREE.SphereGeometry(1.25, 6, 4);
-attachPart(leftArmBone,  armGeo,  PAL.playerSide, _v(0, -2.5, 0));
-attachPart(leftArmBone,  handGeo, PAL.playerTop,  _v(0, -5.5, 0));
-attachPart(rightArmBone, armGeo,  PAL.playerSide, _v(0, -2.5, 0));
-attachPart(rightArmBone, handGeo, PAL.playerTop,  _v(0, -5.5, 0));
-
-// Legs — round limbs with ball feet (50% smaller)
-const legGeo  = new THREE.CylinderGeometry(1.5, 1.25, 7.5, 6);
-const footGeo = new THREE.SphereGeometry(1.5, 6, 4);
-attachPart(leftLegBone,  legGeo,  PAL.playerSide, _v(0, -3.75, 0));
-attachPart(leftLegBone,  footGeo, PAL.playerTop,  _v(0, -8,    0));
-attachPart(rightLegBone, legGeo,  PAL.playerSide, _v(0, -3.75, 0));
-attachPart(rightLegBone, footGeo, PAL.playerTop,  _v(0, -8,    0));
-
-// Player shadow (50% smaller)
-const pShadowGeo = new THREE.CircleGeometry((PLAYER_RADIUS + 4) * 0.5, 16);
-const pShadowMat = new THREE.MeshBasicMaterial({ color: PAL.shadow, transparent: true, opacity: 0.5 });
-const pShadow    = new THREE.Mesh(pShadowGeo, pShadowMat);
-pShadow.rotation.x = -Math.PI / 2;
-pShadow.position.set(0, 0.6, 0);
-scene.add(pShadow); // separate from group so it stays on ground
-
-playerGroup.position.set(0, 0, 0);
 scene.add(playerGroup);
 
-// ── Walk Animation Clip (4-step baked keyframes) ─
-const WALK_DURATION = 0.8;
-const walkTimes = [0, 0.2, 0.4, 0.6, 0.8];
+// ── Ground shadow disc ────────────────────────────────────────
+const pShadow = new THREE.Mesh(
+    new THREE.CircleGeometry((PLAYER_RADIUS + 4) * 0.5, 16),
+    new THREE.MeshBasicMaterial({ color: PAL.shadow, transparent: true, opacity: 0.5 })
+);
+pShadow.rotation.x = -Math.PI / 2;
+pShadow.position.y = 0.6;
+scene.add(pShadow);
 
-const _legSwing = 0.4;                                       // ~23° leg swing
-const _armSwing = 0.3;                                       // ~17° arm swing
-const _xAxis    = new THREE.Vector3(1, 0, 0);
+// ── Animation state ───────────────────────────────────────────
+let mixer      = null;
+let idleAction = null;   // Hero-Idle  (plays by default)
+let walkAction = null;   // Hero-Walk  (fades in while moving)
+let isWalking  = false;
 
-const qLF = new THREE.Quaternion().setFromAxisAngle(_xAxis,  _legSwing);
-const qLB = new THREE.Quaternion().setFromAxisAngle(_xAxis, -_legSwing);
-const qAF = new THREE.Quaternion().setFromAxisAngle(_xAxis,  _armSwing);
-const qAB = new THREE.Quaternion().setFromAxisAngle(_xAxis, -_armSwing);
-const qN  = new THREE.Quaternion();                          // identity (rest)
+/** All clips in the GLB, keyed by lowercased clip name. */
+const animations = {};
 
-const fq = (...qs) => {
-    const a = [];
-    for (const q of qs) a.push(q.x, q.y, q.z, q.w);
-    return a;
-};
+// ── Gate flag — controller skips all work until true ─────────
+let glbReady = false;
 
-const walkClip = new THREE.AnimationClip('Walk', WALK_DURATION, [
-    // Hip bob — Y oscillates ±0.5 from new rest y=10
-    new THREE.VectorKeyframeTrack('Hips.position', walkTimes,
-        [0,9.5,0,  0,10.5,0,  0,9.5,0,  0,10.5,0,  0,9.5,0]),
-    // Left Leg:  fwd → rest → back → rest → fwd
-    new THREE.QuaternionKeyframeTrack('LeftLeg.quaternion', walkTimes,
-        fq(qLF, qN, qLB, qN, qLF)),
-    // Right Leg: back → rest → fwd → rest → back
-    new THREE.QuaternionKeyframeTrack('RightLeg.quaternion', walkTimes,
-        fq(qLB, qN, qLF, qN, qLB)),
-    // Left Arm:  contralateral to left leg (same phase as right leg)
-    new THREE.QuaternionKeyframeTrack('LeftArm.quaternion', walkTimes,
-        fq(qAB, qN, qAF, qN, qAB)),
-    // Right Arm: contralateral to right leg (same phase as left leg)
-    new THREE.QuaternionKeyframeTrack('RightArm.quaternion', walkTimes,
-        fq(qAF, qN, qAB, qN, qAF)),
-]);
+// ── GLB filename ───────────────────────────────────────────────
+const PLAYER_GLB = 'HeroMC-Animation.glb';
 
-// ── Animation Mixer ────────────────────────────
-const mixer     = new THREE.AnimationMixer(playerGroup);
-const walkAction = mixer.clipAction(walkClip);
-walkAction.setLoop(THREE.LoopRepeat);
-let isWalking = false;
+// ─────────────────────────────────────────────────────────────
+//  Load
+// ─────────────────────────────────────────────────────────────
+const _loader = new THREE.GLTFLoader();
+_loader.load(
+    PLAYER_GLB,
+
+    /* onLoad */
+    function (gltf) {
+        const model = gltf.scene;
+
+        // 1. Auto-scale to PLAYER_HEIGHT
+        const box  = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        if (size.y > 0) model.scale.setScalar(PLAYER_HEIGHT / size.y);
+
+        // 2. Configure shadows on all meshes
+        model.traverse(function (node) {
+            if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
+            }
+        });
+
+        // 3. Sit the model's feet exactly on y = 0
+        const box2 = new THREE.Box3().setFromObject(model);
+        model.position.y = -box2.min.y;
+
+        playerGroup.add(model);
+
+        // 3. AnimationMixer — register every clip by lowercased name
+        mixer = new THREE.AnimationMixer(model);
+
+        if (gltf.animations && gltf.animations.length > 0) {
+            gltf.animations.forEach(function (clip) {
+                const action = mixer.clipAction(clip);
+                action.setLoop(THREE.LoopRepeat);
+                animations[clip.name.toLowerCase()] = action;
+            });
+
+            // Named shortcuts for the confirmed clip names
+            idleAction = animations['hero-idle'] || Object.values(animations)[0];
+            walkAction = animations['hero-walk'] || null;
+
+            // Start idle immediately at weight 1 — walk will cross-fade over it
+            if (idleAction) idleAction.play();
+        }
+
+        glbReady = true;
+        console.log(
+            '[player] ' + PLAYER_GLB + ' ready. Clips: [' +
+            Object.keys(animations).join(', ') + ']'
+        );
+    },
+
+    /* onProgress */
+    function (xhr) {
+        if (xhr.total) {
+            console.log('[player] ' + Math.round(xhr.loaded / xhr.total * 100) + '% loaded');
+        }
+    },
+
+    /* onError */
+    function (err) {
+        console.error('[player] Failed to load ' + PLAYER_GLB + ':', err);
+    }
+);

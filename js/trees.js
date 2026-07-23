@@ -1,9 +1,6 @@
 /* ───────────────────────────────────────────────
-    TREES & BUSHES
+    TREES & BUSHES  (modern 3D lighted version)
     createTree · createBush
-    Depends on: scene, PAL, obstacles, animLeafMeshes,
-                leafParticles, particleGeo,
-                woodTex, leafTextures, leafVertTex  (textures.js)
 ─────────────────────────────────────────────── */
 
 /* Shared animation / particle arrays written here,
@@ -27,8 +24,8 @@ function createTree(px, pz, scale = 1.0) {
     const trunkGeo = new THREE.BoxGeometry(trunkW, trunkHeight, trunkD);
 
     // Per-face materials: sides get wood texture, top/bottom get solid color
-    const woodMat = new THREE.MeshBasicMaterial({ map: woodTex });
-    const topMat  = new THREE.MeshBasicMaterial({ color: PAL.treeTrunkTop });
+    const woodMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8, metalness: 0.1 });
+    const topMat  = new THREE.MeshStandardMaterial({ color: PAL.treeTrunkTop, roughness: 0.7, metalness: 0.15 });
     const trunkMats = [
         woodMat, // +X side
         woodMat, // -X side
@@ -39,16 +36,9 @@ function createTree(px, pz, scale = 1.0) {
     ];
     const trunkMesh = new THREE.Mesh(trunkGeo, trunkMats);
     trunkMesh.position.set(px, trunkHeight / 2, pz);
+    trunkMesh.castShadow = true;
+    trunkMesh.receiveShadow = true;
     scene.add(trunkMesh);
-
-    // Sharp pixel-art edge outline on trunk
-    const trunkEdges = new THREE.EdgesGeometry(trunkGeo);
-    const trunkLine  = new THREE.LineSegments(
-        trunkEdges,
-        new THREE.LineBasicMaterial({ color: PAL.trunkEdge })
-    );
-    trunkLine.position.copy(trunkMesh.position);
-    scene.add(trunkLine);
 
     // ── Leaf Disc Layers ────────────────────────────
     const numDiscs       = 4;
@@ -64,15 +54,19 @@ function createTree(px, pz, scale = 1.0) {
 
         const discGeo = new THREE.PlaneGeometry(discR * 2, discR * 2, 1, 1);
 
-        const discMat = new THREE.MeshBasicMaterial({
+        const discMat = new THREE.MeshStandardMaterial({
             map: leafTextures[i],
             transparent: true,
             alphaTest: 0.15,
             side: THREE.DoubleSide,
-            depthWrite: false,
+            shadowSide: THREE.DoubleSide,
+            roughness: 0.6,
+            metalness: 0.1
         });
 
         const discMesh = new THREE.Mesh(discGeo, discMat);
+        discMesh.castShadow = true;
+        discMesh.receiveShadow = true;
 
         // Horizontal plane (rotate -90° around X), then slight random tilt
         discMesh.rotation.x = -Math.PI / 2;
@@ -82,21 +76,10 @@ function createTree(px, pz, scale = 1.0) {
         discMesh.position.set(px, discY, pz);
         scene.add(discMesh);
 
-        // Thin outline ring around each disc for crisp pixel-art look
-        const ringGeo  = new THREE.RingGeometry(discR * 0.92, discR * 1.0, 16);
-        const ringLine = new THREE.LineSegments(
-            new THREE.EdgesGeometry(ringGeo),
-            new THREE.LineBasicMaterial({ color: PAL.treeEdge, transparent: true, opacity: 0.7 })
-        );
-        ringLine.rotation.x = discMesh.rotation.x;
-        ringLine.rotation.y = discMesh.rotation.y;
-        ringLine.position.copy(discMesh.position);
-        scene.add(ringLine);
-
         // Register discs for gentle swaying rustle animation
         animLeafMeshes.push({
             mesh: discMesh,
-            line: ringLine,
+            line: null,
             baseScale: scale,
             phaseOffset: Math.random() * Math.PI * 2 + i * 1.1,
             speed: 1.3 + Math.random() * 0.8,
@@ -118,42 +101,30 @@ function createTree(px, pz, scale = 1.0) {
     const vertY = discBaseY + (discSpacing * (numDiscs - 1)) / 2;
 
     const vertGeo = new THREE.PlaneGeometry(vertW, vertH, 1, 1);
-    const vertMat = new THREE.MeshBasicMaterial({
+    const vertMat = new THREE.MeshStandardMaterial({
         map: leafVertTex,
         transparent: true,
         alphaTest: 0.15,
         side: THREE.DoubleSide,
-        depthWrite: false,
+        shadowSide: THREE.DoubleSide,
+        roughness: 0.6,
+        metalness: 0.1
     });
 
     // Plane 1 (facing North-South)
     const vertMesh1 = new THREE.Mesh(vertGeo, vertMat);
     vertMesh1.position.set(px, vertY, pz);
+    vertMesh1.castShadow = true;
+    vertMesh1.receiveShadow = true;
     scene.add(vertMesh1);
 
     // Plane 2 (facing East-West, rotated 90 degrees around Y)
     const vertMesh2 = new THREE.Mesh(vertGeo, vertMat);
     vertMesh2.position.set(px, vertY, pz);
     vertMesh2.rotation.y = Math.PI / 2;
+    vertMesh2.castShadow = true;
+    vertMesh2.receiveShadow = true;
     scene.add(vertMesh2);
-
-    // Pixel-art edges for the vertical cross-planes
-    const vertEdges = new THREE.EdgesGeometry(vertGeo);
-
-    const vertLine1 = new THREE.LineSegments(
-        vertEdges,
-        new THREE.LineBasicMaterial({ color: PAL.treeEdge, transparent: true, opacity: 0.6 })
-    );
-    vertLine1.position.copy(vertMesh1.position);
-    scene.add(vertLine1);
-
-    const vertLine2 = new THREE.LineSegments(
-        vertEdges,
-        new THREE.LineBasicMaterial({ color: PAL.treeEdge, transparent: true, opacity: 0.6 })
-    );
-    vertLine2.position.copy(vertMesh2.position);
-    vertLine2.rotation.y = Math.PI / 2;
-    scene.add(vertLine2);
 
     // Register vertical planes for sway animation
     const vertSpeed = 1.1 + Math.random() * 0.5;
@@ -161,7 +132,7 @@ function createTree(px, pz, scale = 1.0) {
 
     animLeafMeshes.push({
         mesh: vertMesh1,
-        line: vertLine1,
+        line: null,
         baseScale: scale,
         phaseOffset: vertPhase,
         speed: vertSpeed,
@@ -177,7 +148,7 @@ function createTree(px, pz, scale = 1.0) {
 
     animLeafMeshes.push({
         mesh: vertMesh2,
-        line: vertLine2,
+        line: null,
         baseScale: scale,
         phaseOffset: vertPhase,
         speed: vertSpeed,
@@ -188,7 +159,7 @@ function createTree(px, pz, scale = 1.0) {
         pz: pz,
         isVertPlane: true,
         baseRotZ: vertMesh2.rotation.z,
-        baseRotY: vertMesh2.rotation.y, // already Math.PI / 2 on geometry init
+        baseRotY: vertMesh2.rotation.y,
     });
 
     // Spawn falling leaf particles for this tree
@@ -199,9 +170,10 @@ function createTree(px, pz, scale = 1.0) {
         const pzOff = (Math.random() - 0.5) * discBaseRadius * 1.4;
 
         const color = Math.random() > 0.5 ? PAL.treeLeavesTop : PAL.treeLeavesSide;
-        const mat   = new THREE.MeshBasicMaterial({ color });
+        const mat   = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
         const pMesh = new THREE.Mesh(particleGeo, mat);
         pMesh.position.set(px + pxOff, py, pz + pzOff);
+        pMesh.castShadow = true;
         scene.add(pMesh);
 
         leafParticles.push({
@@ -218,22 +190,12 @@ function createTree(px, pz, scale = 1.0) {
         });
     }
 
-    // Shadow ellipse on ground (covers full canopy width)
-    const shadowGeo = new THREE.CircleGeometry(discBaseRadius * 0.85, 14);
-    const shadowMat = new THREE.MeshBasicMaterial({ color: PAL.shadow, transparent: true, opacity: 0.48 });
-    const shadow    = new THREE.Mesh(shadowGeo, shadowMat);
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.set(px, 0.5, pz);
-    scene.add(shadow);
-
     // Collision AABB on trunk only – player can walk under canopy
     const box = new THREE.Box3().setFromObject(trunkMesh);
-    obstacles.push({ mesh: trunkMesh, box, shadow });
+    obstacles.push({ mesh: trunkMesh, box });
 }
 
-/* ───────────────────────────────────────────────
-    BUSHES  (Low-poly walk-through decorations)
-─────────────────────────────────────────────── */
+/* ── Bushes  (Low-poly walk-through decorations) ── */
 function createBush(px, pz, scale = 1.0) {
     const bushParts = [
         { r: 14, ox:  0, oy: 8, oz:  0 },
@@ -248,22 +210,17 @@ function createBush(px, pz, scale = 1.0) {
         const oz = part.oz * scale;
 
         const bushGeo  = new THREE.SphereGeometry(r, 8, 6);
-        // Slightly darker green/leaves side to separate bushes from trees visually
-        const bushMat  = new THREE.MeshBasicMaterial({ color: PAL.treeLeavesSide });
+        const bushMat  = new THREE.MeshStandardMaterial({ color: PAL.treeLeavesSide, roughness: 0.8, metalness: 0.1 });
         const bushMesh = new THREE.Mesh(bushGeo, bushMat);
         bushMesh.position.set(px + ox, oy, pz + oz);
+        bushMesh.castShadow = true;
+        bushMesh.receiveShadow = true;
         scene.add(bushMesh);
 
-        // Outline
-        const bushEdges = new THREE.EdgesGeometry(bushGeo);
-        const bushLine  = new THREE.LineSegments(bushEdges, new THREE.LineBasicMaterial({ color: PAL.treeEdge }));
-        bushLine.position.copy(bushMesh.position);
-        scene.add(bushLine);
-
-        // Register for leaf rustle animation (same system as trees!)
+        // Register for leaf rustle animation
         animLeafMeshes.push({
             mesh: bushMesh,
-            line: bushLine,
+            line: null,
             baseScale: scale,
             phaseOffset: Math.random() * Math.PI * 2,
             speed: 1.2 + Math.random() * 0.8,
@@ -272,15 +229,7 @@ function createBush(px, pz, scale = 1.0) {
             oz: oz,
             px: px,
             pz: pz,
-            trunkHeight: 0 // Bushes are directly on the ground
+            trunkHeight: 0
         });
     });
-
-    // Shadow
-    const shadowGeo = new THREE.CircleGeometry(20 * scale, 10);
-    const shadowMat = new THREE.MeshBasicMaterial({ color: PAL.shadow, transparent: true, opacity: 0.35 });
-    const shadow    = new THREE.Mesh(shadowGeo, shadowMat);
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.set(px, 0.5, pz);
-    scene.add(shadow);
 }

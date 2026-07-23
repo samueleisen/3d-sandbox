@@ -1,7 +1,6 @@
 /* ───────────────────────────────────────────────
-    FLOWER BEDS
+    FLOWER BEDS  (modern 3D lighted version)
     createFlowerBed
-    Depends on: scene, PAL
 ─────────────────────────────────────────────── */
 
 /* Flower animation array — read by loop.js each frame */
@@ -10,18 +9,16 @@ const animFlowers = [];
 function createFlowerBed(px, pz, scale = 1.0) {
     // Soil base
     const soilGeo  = new THREE.CircleGeometry(20 * scale, 12);
-    const soilMat  = new THREE.MeshBasicMaterial({ color: PAL.flowerSoil });
+    const soilMat  = new THREE.MeshStandardMaterial({
+        color: PAL.flowerSoil,
+        roughness: 0.9,
+        metalness: 0.05
+    });
     const soilMesh = new THREE.Mesh(soilGeo, soilMat);
     soilMesh.rotation.x = -Math.PI / 2;
     soilMesh.position.set(px, 0.52, pz);
+    soilMesh.receiveShadow = true;
     scene.add(soilMesh);
-
-    // Soil border
-    const borderEdges = new THREE.EdgesGeometry(soilGeo);
-    const borderLine  = new THREE.LineSegments(borderEdges, new THREE.LineBasicMaterial({ color: 0x111122 }));
-    borderLine.rotation.x = -Math.PI / 2;
-    borderLine.position.copy(soilMesh.position);
-    scene.add(borderLine);
 
     // Small flowers
     const flowerColors = [PAL.flowerRed, PAL.flowerYellow, PAL.flowerPink];
@@ -36,21 +33,21 @@ function createFlowerBed(px, pz, scale = 1.0) {
         const fy     = 0.52 + (5 * scale) / 2;
 
         const fColor    = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-        const flowerMat  = new THREE.MeshBasicMaterial({ color: fColor });
+        const flowerMat  = new THREE.MeshStandardMaterial({
+            color: fColor,
+            roughness: 0.5,
+            metalness: 0.1
+        });
         const flowerMesh = new THREE.Mesh(flowerGeo, flowerMat);
         flowerMesh.position.set(fx, fy, fz);
+        flowerMesh.castShadow = true;
+        flowerMesh.receiveShadow = true;
         scene.add(flowerMesh);
-
-        // Flower outline
-        const flowerEdges = new THREE.EdgesGeometry(flowerGeo);
-        const flowerLine  = new THREE.LineSegments(flowerEdges, new THREE.LineBasicMaterial({ color: 0x111122 }));
-        flowerLine.position.copy(flowerMesh.position);
-        scene.add(flowerLine);
 
         // Register for sway
         animFlowers.push({
             mesh: flowerMesh,
-            line: flowerLine,
+            line: null,
             baseX: fx,
             baseZ: fz,
             y: fy,
