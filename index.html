@@ -13,7 +13,8 @@
 <body>
 
     <div id="ui-overlay">
-        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
+        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+            Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
         <div style="margin-top: 2px;">Move or Drag Mouse to Orbit Camera</div>
         <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
         <div id="perf-hud"
@@ -68,7 +69,8 @@
             <input type="range" id="ctrl-size" min="150" max="800" value="420">
         </div>
 
-        <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px;">
+        <div class="control-group"
+            style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px;">
             <label>Culling (Object Hiding)</label>
             <select id="ctrl-culling-mode">
                 <option value="generous" selected>Generous (Forgiving)</option>
@@ -91,6 +93,23 @@
                 <option value="0.50">50% Performance (0.50x)</option>
             </select>
         </div>
+
+        <div class="control-group">
+            <label>Grass Density</label>
+            <select id="ctrl-grass-density">
+                <option value="5000" selected>Ultra Vision (5,000 blades)</option>
+                <option value="3500">Dense (3,500 blades)</option>
+                <option value="2000">Medium (2,000 blades)</option>
+                <option value="0">Off (Disabled)</option>
+            </select>
+        </div>
+
+        <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="ctrl-fov-lines" checked style="width: auto; cursor: pointer;">
+                Show FOV Vision Boundary Lines
+            </label>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -107,6 +126,8 @@
     <script src="js/trees.js"></script>
     <script src="js/flowers.js"></script>
     <script src="js/houses.js"></script>
+    <script src="js/grass.js"></script>
+    <script src="js/cameraFOVHelper.js"></script>
     <script src="js/scenePlacement.js"></script>
 
     <!-- Character & Systems -->

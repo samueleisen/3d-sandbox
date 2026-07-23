@@ -27,10 +27,21 @@ function animate() {
     /* ── Player Physics, Animation & Ponytail Secondary Motion ── */
     updatePlayerController(dt);
 
-    /* ── Camera 3D Orbit Tracking ── */
     const px = playerGroup.position.x;
     const py = playerGroup.position.y;
     const pz = playerGroup.position.z;
+
+    /* ── Interactive Grass Collision Bending & Wind Sway ── */
+    if (typeof updateGrassPhysics === 'function') {
+        updateGrassPhysics(px, py, pz, dt, time);
+    }
+
+    /* ── Camera FOV Vision Boundary Helper Lines ── */
+    if (typeof updateCameraFOVHelper === 'function') {
+        updateCameraFOVHelper(px, py, pz);
+    }
+
+    /* ── Camera 3D Orbit Tracking ── */
 
     const pitchRad = THREE.MathUtils.degToRad(camAngleDeg);
     const yawRad = THREE.MathUtils.degToRad(camYawDeg || 0);

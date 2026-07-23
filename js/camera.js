@@ -30,6 +30,7 @@ const ctrlSize        = document.getElementById('ctrl-size');
 const ctrlCullingMode = document.getElementById('ctrl-culling-mode');
 const ctrlCullingDist = document.getElementById('ctrl-culling-dist');
 const ctrlRenderScale = document.getElementById('ctrl-render-scale');
+const ctrlGrassDensity = document.getElementById('ctrl-grass-density');
 
 const valTilt        = document.getElementById('val-tilt');
 const valYaw         = document.getElementById('val-yaw');
@@ -99,6 +100,22 @@ ctrlType.addEventListener('change', () => {
     syncUI();
     initCamera();
 });
+
+if (ctrlGrassDensity) {
+    ctrlGrassDensity.addEventListener('change', () => {
+        const density = parseInt(ctrlGrassDensity.value, 10);
+        if (typeof createGrassLandscape === 'function') {
+            createGrassLandscape(density);
+        }
+    });
+}
+
+const ctrlFovLines = document.getElementById('ctrl-fov-lines');
+if (ctrlFovLines) {
+    ctrlFovLines.addEventListener('change', () => {
+        fovHelperEnabled = ctrlFovLines.checked;
+    });
+}
 
 if (ctrlRenderScale) {
     ctrlRenderScale.addEventListener('change', () => {

@@ -27,3 +27,8 @@ createFlowerBed(-220, -260, 1.1);
 // Houses
 createHouse( 420,   30, 1.1);  // Large village house on the right
 createHouse(-280,  -50, 0.85); // Small cozy cottage on the left
+
+// Interactive Grass Field (InstancedMesh landscape)
+if (typeof createGrassLandscape === 'function') {
+    createGrassLandscape(5000);
+}
