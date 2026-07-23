@@ -12,6 +12,11 @@ const coordsEl = document.getElementById('coords');
 let camTargetX = 0, camTargetZ = 0;
 const CAM_LERP = 8; // higher = snappier
 
+// Reusable frustum calculation objects (prevents GC allocation per frame)
+const cameraFrustum = new THREE.Frustum();
+const projScreenMatrix = new THREE.Matrix4();
+let totalCulledObjects = 0;
+
 function animate() {
     requestAnimationFrame(animate);
     const frameStart = performance.now();
@@ -21,8 +26,45 @@ function animate() {
     /* ── Player Physics, Animation & Ponytail Secondary Motion ── */
     updatePlayerController(dt);
 
-    /* ── Leaf Rustling Animation ── */
+    /* ── Camera 3D Orbit Tracking ── */
+    const px = playerGroup.position.x;
+    const py = playerGroup.position.y;
+    const pz = playerGroup.position.z;
+
+    const pitchRad = THREE.MathUtils.degToRad(camAngleDeg);
+    const yawRad = THREE.MathUtils.degToRad(camYawDeg || 0);
+
+    const groundDist = camHeight * Math.sin(pitchRad);
+    const camOffsetY = camHeight * Math.cos(pitchRad);
+    const camOffsetX = groundDist * Math.sin(yawRad);
+    const camOffsetZ = groundDist * Math.cos(yawRad);
+
+    camera.position.x = px + camOffsetX;
+    camera.position.y = py + camOffsetY;
+    camera.position.z = pz + camOffsetZ;
+    camera.lookAt(px, py + 12, pz);
+
+    /* ── Compute Camera View Frustum for Object Culling ── */
+    camera.updateMatrixWorld();
+    projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    cameraFrustum.setFromProjectionMatrix(projScreenMatrix);
+
+    let activeObjectsCount = 0;
+    let totalTrackedObjects = 0;
+
+    /* ── Leaf Rustling Animation with Frustum Culling ── */
     animLeafMeshes.forEach(item => {
+        totalTrackedObjects++;
+        // View Frustum Culling: skip CPU animation math & GPU draw if off-screen
+        if (!cameraFrustum.intersectsObject(item.mesh)) {
+            item.mesh.visible = false;
+            if (item.line) item.line.visible = false;
+            return;
+        }
+        item.mesh.visible = true;
+        if (item.line) item.line.visible = true;
+        activeObjectsCount++;
+
         const wobble = Math.sin(time * item.speed + item.phaseOffset);
 
         if (item.isDisc) {
@@ -61,8 +103,17 @@ function animate() {
         }
     });
 
-    /* ── Falling Leaves Animation ── */
+    /* ── Falling Leaves Animation with Frustum Culling ── */
     leafParticles.forEach(p => {
+        totalTrackedObjects++;
+        // View Frustum Culling: skip CPU physics math & GPU draw if off-screen
+        if (!cameraFrustum.intersectsObject(p.mesh)) {
+            p.mesh.visible = false;
+            return;
+        }
+        p.mesh.visible = true;
+        activeObjectsCount++;
+
         p.mesh.position.x += p.vx * dt;
         p.mesh.position.y += p.vy * dt;
         p.mesh.position.z += p.vz * dt;
@@ -82,30 +133,23 @@ function animate() {
         }
     });
 
-    /* ── Flower Swaying Animation ── */
+    /* ── Flower Swaying Animation with Frustum Culling ── */
     animFlowers.forEach(f => {
+        totalTrackedObjects++;
+        // View Frustum Culling: skip CPU animation math & GPU draw if off-screen
+        if (!cameraFrustum.intersectsObject(f.mesh)) {
+            f.mesh.visible = false;
+            if (f.line) f.line.visible = false;
+            return;
+        }
+        f.mesh.visible = true;
+        if (f.line) f.line.visible = true;
+        activeObjectsCount++;
+
         const sway = Math.sin(time * f.speed + f.phaseOffset) * 0.8 * f.scale;
         f.mesh.position.x = f.baseX + sway;
         if (f.line) f.line.position.copy(f.mesh.position);
     });
-
-    /* ── Camera 3D Orbit Tracking ── */
-    const px = playerGroup.position.x;
-    const py = playerGroup.position.y;
-    const pz = playerGroup.position.z;
-
-    const pitchRad = THREE.MathUtils.degToRad(camAngleDeg);
-    const yawRad = THREE.MathUtils.degToRad(camYawDeg || 0);
-
-    const groundDist = camHeight * Math.sin(pitchRad);
-    const camOffsetY = camHeight * Math.cos(pitchRad);
-    const camOffsetX = groundDist * Math.sin(yawRad);
-    const camOffsetZ = groundDist * Math.cos(yawRad);
-
-    camera.position.x = px + camOffsetX;
-    camera.position.y = py + camOffsetY;
-    camera.position.z = pz + camOffsetZ;
-    camera.lookAt(px, py + 12, pz);
 
     /* ── View-Frustum Aligned & Texel-Snapped Shadow Tracking ── */
     // Camera forward unit vector on horizontal ground plane
@@ -135,7 +179,7 @@ function animate() {
     if (typeof shadowHelper !== 'undefined') shadowHelper.update();
 
     /* ── HUD ── */
-    coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)}`;
+    coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)} | Active: ${activeObjectsCount}/${totalTrackedObjects}`;
 
     renderer.render(scene, camera);
 
