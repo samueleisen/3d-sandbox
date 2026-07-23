@@ -11,15 +11,15 @@ const PLAYER_FRICTION = 16;         // deceleration damping factor
 const PLAYER_RADIUS = 6;           // collision half-width
 const PLAYER_HEIGHT = 14;
 const EDGE_WALL_H = 20;
-const JUMP_POWER = 300;           // initial vertical jump velocity (units/sec)
+const JUMP_POWER = 100;           // initial vertical jump velocity (units/sec)
 const JUMP_GRAVITY = 180;         // gravity acceleration (units/sec²) — 40 frames / 1.6667s airtime
 const GRAVITY = 15;               // world gravity acceleration (m/s²) 9.81
 
 // Mutable Culling & Render State (controlled via UI)
-let cullingMode = 'generous';         // 'generous', 'balanced', 'aggressive', 'off'
-let maxVisDist = 1200;                // max view distance units
+let cullingMode = 'off';              // 'generous', 'balanced', 'aggressive', 'off'
+let maxVisDist = 99999;               // max view distance units
 let maxVisDistSq = maxVisDist * maxVisDist;
-let cullingMargin = 80;               // safety padding margin to prevent edge popping
+let cullingMargin = 200;              // safety padding margin to prevent edge popping
 let renderScale = 1.0;                // render resolution multiplier (1.0, 0.75, 0.5)
 
 // Mutable Camera State

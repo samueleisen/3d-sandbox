@@ -6,13 +6,13 @@
 
 let grassInstancedMesh = null;
 let grassData = [];
-let maxGrassCount = 5000;
+let maxGrassCount = 200000;
 
-// Rolling Grid parameters (900x900 total active span extending deep into camera horizon)
-const CHUNK_SIZE = 300;    // units per chunk square
-const GRID_RADIUS = 2;     // 5x5 chunk grid (-2 to +2)
-const GRID_DIM = GRID_RADIUS * 2 + 1; // 5
-const TOTAL_CHUNKS = GRID_DIM * GRID_DIM; // 25
+// Rolling Grid parameters (11x11 chunk grid = 4400x4400 total active span extending around camera)
+const CHUNK_SIZE = 400;    // units per chunk square
+const GRID_RADIUS = 5;     // 11x11 chunk grid (-5 to +5)
+const GRID_DIM = GRID_RADIUS * 2 + 1; // 11
+const TOTAL_CHUNKS = GRID_DIM * GRID_DIM; // 121
 let activeGridX = null;
 let activeGridZ = null;
 
@@ -26,7 +26,7 @@ const grassUniforms = {
     uCamDir: { value: new THREE.Vector3(0, 0, -1) },
     uHalfFovCos: { value: 0.1 },
     uTime: { value: 0 },
-    uMaxVisDist: { value: 7000.0 },
+    uMaxVisDist: { value: 2800.0 },
     uBendRadius: { value: 24.0 }
 };
 
@@ -43,8 +43,8 @@ function hash2D(cx, cz, index, seed = 0) {
  * Pivot is anchored at the bottom (y=0) so bending rotates from the root.
  */
 function createGrassBladeGeometry() {
-    const w = 1.6;
-    const h = 7.0;
+    const w = 2.2;
+    const h = 10.0;
 
     // Plane geometry with 3 height segments for natural curvature
     const geo = new THREE.PlaneGeometry(w, h, 1, 3);
@@ -103,9 +103,9 @@ function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
 function updateRollingGrid(camX, camZ, camDirX = 0, camDirZ = -1) {
     if (!grassInstancedMesh) return;
 
-    // Center grid deep along camera vision frustum (+2.0 * CHUNK_SIZE forward)
-    const forwardPx = camX + camDirX * (CHUNK_SIZE * 2.0);
-    const forwardPz = camZ + camDirZ * (CHUNK_SIZE * 2.0);
+    // Center grid deep along camera vision frustum (+1.5 * CHUNK_SIZE forward)
+    const forwardPx = camX + camDirX * (CHUNK_SIZE * 1.5);
+    const forwardPz = camZ + camDirZ * (CHUNK_SIZE * 1.5);
 
     const currentChunkX = Math.floor((forwardPx + CHUNK_SIZE / 2) / CHUNK_SIZE);
     const currentChunkZ = Math.floor((forwardPz + CHUNK_SIZE / 2) / CHUNK_SIZE);
@@ -197,8 +197,8 @@ function createGrassLandscape(count = 5000) {
             float distToCam = length(dirFromCam);
             float distToPlayer = length(instWorldPos.xz - uPlayerPos.xz);
 
-            // 1. Smooth Distance Scale Dissolve from Camera Position
-            float innerDist = uMaxVisDist * 0.35;
+            // 1. Smooth Distance Scale Dissolve from Camera Position (Horizon Fade)
+            float innerDist = uMaxVisDist * 0.30;
             float fadeAlpha = 1.0;
             if (distToCam > innerDist) {
                 float t = clamp((distToCam - innerDist) / (uMaxVisDist - innerDist), 0.0, 1.0);
@@ -218,8 +218,8 @@ function createGrassLandscape(count = 5000) {
             // Scale vertex smoothly down to 0 at view boundary
             transformed *= fadeAlpha;
 
-            // Height-based influence factor (0 at root y=0, 1 at top tip y=7)
-            float heightFactor = clamp(position.y / 7.0, 0.0, 1.0);
+            // Height-based influence factor (0 at root y=0, 1 at top tip y=10)
+            float heightFactor = clamp(position.y / 10.0, 0.0, 1.0);
 
             // 3. GPU Ambient Wind Sway
             float windSway = sin(uTime * 2.8 + instWorldPos.x * 0.08 + instWorldPos.z * 0.08) * 0.45 * heightFactor;
@@ -287,7 +287,9 @@ function updateGrassPhysics(px, py, pz, dt, time) {
     grassUniforms.uPlayerPos.value.set(px, py, pz);
     grassUniforms.uTime.value = time;
 
-    if (typeof maxVisDist !== 'undefined') {
+    if (typeof maxVisDist !== 'undefined' && maxVisDist < 10000) {
         grassUniforms.uMaxVisDist.value = maxVisDist;
+    } else {
+        grassUniforms.uMaxVisDist.value = 2800.0;
     }
 }

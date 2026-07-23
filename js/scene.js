@@ -10,7 +10,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(PAL.bg, 0.0008);
+// scene.fog disabled for crystal-clear far horizon vision
 
 // ── Lighting ────────────────────────────────────────────────
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -43,12 +43,12 @@ let camera;
 
 function initCamera() {
     if (cameraType === 'persp') {
-        camera = new THREE.PerspectiveCamera(camFov, aspect, 10, 3000);
+        camera = new THREE.PerspectiveCamera(camFov, aspect, 10, 8000);
     } else {
         camera = new THREE.OrthographicCamera(
             -camViewSize * aspect, camViewSize * aspect,
             camViewSize, -camViewSize,
-            10, 3000
+            10, 8000
         );
     }
 }

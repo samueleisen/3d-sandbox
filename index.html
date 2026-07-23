@@ -69,21 +69,7 @@
             <input type="range" id="ctrl-size" min="150" max="800" value="420">
         </div>
 
-        <div class="control-group"
-            style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px;">
-            <label>Culling (Object Hiding)</label>
-            <select id="ctrl-culling-mode">
-                <option value="generous" selected>Generous (Forgiving)</option>
-                <option value="balanced">Balanced</option>
-                <option value="aggressive">Aggressive (High FPS)</option>
-                <option value="off">Off (Render All)</option>
-            </select>
-        </div>
 
-        <div class="control-group" id="group-culling-dist">
-            <label>Max View Distance: <span id="val-culling-dist" class="control-value">1200</span></label>
-            <input type="range" id="ctrl-culling-dist" min="400" max="2500" step="50" value="1200">
-        </div>
 
         <div class="control-group">
             <label>Render Quality (Resolution Scale)</label>
@@ -97,9 +83,9 @@
         <div class="control-group">
             <label>Grass Density</label>
             <select id="ctrl-grass-density">
-                <option value="5000" selected>Ultra Vision (5,000 blades)</option>
-                <option value="3500">Dense (3,500 blades)</option>
-                <option value="2000">Medium (2,000 blades)</option>
+                <option value="30000" selected>Deep Horizon 2X (200,000 blades)</option>
+                <option value="20000">Ultra Dense (20,000 blades)</option>
+                <option value="10000">Far Horizon (10,000 blades)</option>
                 <option value="0">Off (Disabled)</option>
             </select>
         </div>
@@ -120,12 +106,8 @@
     <script src="js/perfBuffer.js"></script>
     <script src="js/scene.js"></script>
 
-    <!-- World & Textures -->
+    <!-- World & Landscape -->
     <script src="js/world.js"></script>
-    <script src="js/textures.js"></script>
-    <script src="js/trees.js"></script>
-    <script src="js/flowers.js"></script>
-    <script src="js/houses.js"></script>
     <script src="js/grass.js"></script>
     <script src="js/cameraFOVHelper.js"></script>
     <script src="js/scenePlacement.js"></script>
