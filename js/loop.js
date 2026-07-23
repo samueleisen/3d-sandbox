@@ -89,22 +89,23 @@ function animate() {
         if (f.line) f.line.position.copy(f.mesh.position);
     });
 
-    /* ── Camera tracking (centered on player X, Y, Z) ── */
+    /* ── Camera 3D Orbit Tracking ── */
     const px = playerGroup.position.x;
     const py = playerGroup.position.y;
     const pz = playerGroup.position.z;
 
-    camTargetX = px;
-    camTargetZ = pz;
+    const pitchRad = THREE.MathUtils.degToRad(camAngleDeg);
+    const yawRad   = THREE.MathUtils.degToRad(camYawDeg || 0);
 
-    const camAngleRad = THREE.MathUtils.degToRad(camAngleDeg);
-    const camOffsetY  = camHeight * Math.cos(camAngleRad);
-    const camOffsetZ  = camHeight * Math.sin(camAngleRad);
+    const groundDist  = camHeight * Math.sin(pitchRad);
+    const camOffsetY  = camHeight * Math.cos(pitchRad);
+    const camOffsetX  = groundDist * Math.sin(yawRad);
+    const camOffsetZ  = groundDist * Math.cos(yawRad);
 
-    camera.position.x = px;
+    camera.position.x = px + camOffsetX;
     camera.position.y = py + camOffsetY;
     camera.position.z = pz + camOffsetZ;
-    camera.lookAt(px, py, pz);
+    camera.lookAt(px, py + 12, pz);
 
     /* ── HUD ── */
     coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)}`;

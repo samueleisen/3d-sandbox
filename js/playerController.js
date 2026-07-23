@@ -19,9 +19,10 @@
 ─────────────────────────────────────────────── */
 
 // Blend & physics constants
-const WALK_FADE_IN    = 0.18;   // seconds
-const WALK_FADE_OUT   = 0.25;   // seconds
-const MIN_WALK_SPEED  = 8.0;    // units/sec threshold for locomotion animation
+const WALK_FADE_IN       = 0.18;   // seconds
+const WALK_FADE_OUT      = 0.25;   // seconds
+const JUMP_LAUNCH_BLEND  = 0.14;   // seconds smooth transition from idle/walk into jump
+const MIN_WALK_SPEED     = 8.0;    // units/sec threshold for locomotion animation
 
 // Persistent velocity state
 let velX = 0;
@@ -54,16 +55,21 @@ function updatePlayerController(dt) {
     if (mixer) mixer.update(dt);
     if (!glbReady) return;
 
-    /* ── 1. Input vector & Target horizontal velocity ────────── */
+    /* ── 1. Input vector & Target horizontal velocity (Camera-Relative) ── */
     let rawDx = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
     let rawDz = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
 
-    const inputLen = Math.sqrt(rawDx * rawDx + rawDz * rawDz);
+    // Transform input vector by camera horizontal yaw angle (aligns WASD with camera view)
+    const yawRad = THREE.MathUtils.degToRad(camYawDeg || 0);
+    const moveX =  rawDx * Math.cos(yawRad) + rawDz * Math.sin(yawRad);
+    const moveZ = -rawDx * Math.sin(yawRad) + rawDz * Math.cos(yawRad);
+
+    const inputLen = Math.sqrt(moveX * moveX + moveZ * moveZ);
     let dirX = 0;
     let dirZ = 0;
     if (inputLen > 0) {
-        dirX = rawDx / inputLen;
-        dirZ = rawDz / inputLen;
+        dirX = moveX / inputLen;
+        dirZ = moveZ / inputLen;
     }
 
     const targetVelX = dirX * PLAYER_SPEED;
@@ -113,21 +119,20 @@ function updatePlayerController(dt) {
     const targetGroundY = getGroundHeight(px, pz);
     let justLanded = false;
 
-    // 0-Frame Latency Instant Jump Trigger
+    // Smooth Transition Jump Trigger
     if (keys.space && isGrounded) {
         isGrounded = false;
         velY = JUMP_POWER;
 
-        // Snappy fadeOut to transfer weight to Hero-Jump without disabling idle/walk actions in Three.js
-        if (idleAction) idleAction.fadeOut(0.02);
-        if (walkAction) walkAction.fadeOut(0.02);
+        // Smoothly fade out idle and walk actions over JUMP_LAUNCH_BLEND seconds
+        if (idleAction) idleAction.fadeOut(JUMP_LAUNCH_BLEND);
+        if (walkAction) walkAction.fadeOut(JUMP_LAUNCH_BLEND);
 
         if (jumpAction) {
-            jumpAction.stop();
             jumpAction.reset();
             jumpAction.time = 0;
             jumpAction.enabled = true;
-            jumpAction.setEffectiveWeight(1.0);
+            jumpAction.fadeIn(JUMP_LAUNCH_BLEND);
             jumpAction.play();
         }
     }

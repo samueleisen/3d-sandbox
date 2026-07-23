@@ -18,6 +18,7 @@ const GRAVITY = 9.81;               // world gravity acceleration (m/s²)
 // Mutable Camera State
 let cameraType = 'persp';
 let camAngleDeg = 45;
+let camYawDeg = 0;                  // horizontal camera rotation angle (degrees)
 let camHeight = 450;
 let camFov = 50;
 let camViewSize = 420;

@@ -1,7 +1,8 @@
 /* ───────────────────────────────────────────────
-    CAMERA CONTROLS  (resize + UI panel)
+    CAMERA CONTROLS  (resize + UI panel + mouse & pointer-lock orbiting)
     Depends on: scene.js (initCamera, camera, renderer, aspect)
-                constants.js (cameraType, camAngle*, camFov, camViewSize)
+                constants.js (cameraType, camAngle*, camYawDeg, camFov, camViewSize)
+                input.js (keys)
 ─────────────────────────────────────────────── */
 
 /* ── Resize Handler ───────────────────────────── */
@@ -22,11 +23,13 @@ window.addEventListener('resize', () => {
 /* ── Camera Controls UI Sync ─────────────────── */
 const ctrlType   = document.getElementById('ctrl-type');
 const ctrlTilt   = document.getElementById('ctrl-tilt');
+const ctrlYaw    = document.getElementById('ctrl-yaw');
 const ctrlHeight = document.getElementById('ctrl-height');
 const ctrlFov    = document.getElementById('ctrl-fov');
 const ctrlSize   = document.getElementById('ctrl-size');
 
 const valTilt   = document.getElementById('val-tilt');
+const valYaw    = document.getElementById('val-yaw');
 const valHeight = document.getElementById('val-height');
 const valFov    = document.getElementById('val-fov');
 const valSize   = document.getElementById('val-size');
@@ -37,14 +40,12 @@ const groupSize = document.getElementById('group-size');
 function syncUI() {
     cameraType  = ctrlType.value;
     camAngleDeg = parseFloat(ctrlTilt.value);
+    camYawDeg   = parseFloat(ctrlYaw.value);
     camHeight   = parseFloat(ctrlHeight.value);
     camFov      = parseFloat(ctrlFov.value);
     camViewSize = parseFloat(ctrlSize.value);
 
-    valTilt.textContent   = `${camAngleDeg}°`;
-    valHeight.textContent = camHeight;
-    valFov.textContent    = `${camFov}°`;
-    valSize.textContent   = camViewSize;
+    updateUISliders();
 
     if (cameraType === 'persp') {
         groupFov.style.display  = '';
@@ -55,6 +56,23 @@ function syncUI() {
     }
 }
 
+function updateUISliders() {
+    if (ctrlTilt) ctrlTilt.value = camAngleDeg;
+    if (valTilt) valTilt.textContent = `${Math.round(camAngleDeg)}°`;
+
+    if (ctrlYaw) ctrlYaw.value = camYawDeg;
+    if (valYaw) valYaw.textContent = `${Math.round(camYawDeg)}°`;
+
+    if (ctrlHeight) ctrlHeight.value = camHeight;
+    if (valHeight) valHeight.textContent = Math.round(camHeight);
+
+    if (ctrlFov) ctrlFov.value = camFov;
+    if (valFov) valFov.textContent = `${Math.round(camFov)}°`;
+
+    if (ctrlSize) ctrlSize.value = camViewSize;
+    if (valSize) valSize.textContent = Math.round(camViewSize);
+}
+
 ctrlType.addEventListener('change', () => {
     syncUI();
     initCamera();
@@ -62,17 +80,22 @@ ctrlType.addEventListener('change', () => {
 
 ctrlTilt.addEventListener('input', () => {
     camAngleDeg = parseFloat(ctrlTilt.value);
-    valTilt.textContent = `${camAngleDeg}°`;
+    if (valTilt) valTilt.textContent = `${Math.round(camAngleDeg)}°`;
+});
+
+ctrlYaw.addEventListener('input', () => {
+    camYawDeg = parseFloat(ctrlYaw.value);
+    if (valYaw) valYaw.textContent = `${Math.round(camYawDeg)}°`;
 });
 
 ctrlHeight.addEventListener('input', () => {
     camHeight = parseFloat(ctrlHeight.value);
-    valHeight.textContent = camHeight;
+    if (valHeight) valHeight.textContent = Math.round(camHeight);
 });
 
 ctrlFov.addEventListener('input', () => {
     camFov = parseFloat(ctrlFov.value);
-    valFov.textContent = `${camFov}°`;
+    if (valFov) valFov.textContent = `${Math.round(camFov)}°`;
     if (cameraType === 'persp') {
         camera.fov = camFov;
         camera.updateProjectionMatrix();
@@ -81,7 +104,7 @@ ctrlFov.addEventListener('input', () => {
 
 ctrlSize.addEventListener('input', () => {
     camViewSize = parseFloat(ctrlSize.value);
-    valSize.textContent = camViewSize;
+    if (valSize) valSize.textContent = Math.round(camViewSize);
     if (cameraType === 'ortho') {
         camera.left   = -camViewSize * aspect;
         camera.right  =  camViewSize * aspect;
@@ -89,6 +112,60 @@ ctrlSize.addEventListener('input', () => {
         camera.bottom = -camViewSize;
         camera.updateProjectionMatrix();
     }
+});
+
+/* ── Mouse Movement & Drag Orbit Controls ────── */
+let isDragging = false;
+let previousMouseX = 0;
+let previousMouseY = 0;
+
+// Enable Pointer Lock on Canvas Click (optional 3D mouse look mode)
+renderer.domElement.addEventListener('click', (e) => {
+    // Only lock pointer if not clicking UI panels
+    if (e.target.closest('#camera-panel') || e.target.closest('#ui-overlay')) return;
+    if (document.pointerLockElement !== renderer.domElement) {
+        renderer.domElement.requestPointerLock();
+    }
+});
+
+// Drag Orbit handling (works both with pointer lock and drag-click)
+window.addEventListener('mousedown', (e) => {
+    if (e.target.closest('#camera-panel') || e.target.closest('#ui-overlay')) return;
+    isDragging = true;
+    previousMouseX = e.clientX;
+    previousMouseY = e.clientY;
+});
+
+window.addEventListener('mousemove', (e) => {
+    let deltaX = 0;
+    let deltaY = 0;
+
+    if (document.pointerLockElement === renderer.domElement) {
+        // Pointer Lock Active: direct mouse movement
+        deltaX = e.movementX;
+        deltaY = e.movementY;
+    } else if (isDragging) {
+        // Drag Orbit Active: cursor movement delta
+        deltaX = e.clientX - previousMouseX;
+        deltaY = e.clientY - previousMouseY;
+        previousMouseX = e.clientX;
+        previousMouseY = e.clientY;
+    } else {
+        return;
+    }
+
+    // Horizontal Yaw (0° to 360°) — reversed axis
+    camYawDeg = (camYawDeg - deltaX * 0.35) % 360;
+    if (camYawDeg < 0) camYawDeg += 360;
+
+    // Vertical Tilt Pitch (clamped between 10° and 85°) — reversed axis
+    camAngleDeg = THREE.MathUtils.clamp(camAngleDeg - deltaY * 0.25, 10, 85);
+
+    updateUISliders();
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
 });
 
 /* ── Bootstrap ───────────────────────────────── */

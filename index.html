@@ -13,9 +13,8 @@
 <body>
 
     <div id="ui-overlay">
-        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
-            Move
-        </div>
+        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
+        <div style="margin-top: 2px;">Move or Drag Mouse to Orbit Camera</div>
         <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
         <div id="perf-hud"
             style="margin-top: 8px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 6px; font-size: 11px; pointer-events: auto;">
@@ -47,6 +46,11 @@
         <div class="control-group">
             <label>Tilt Angle: <span id="val-tilt" class="control-value">45°</span></label>
             <input type="range" id="ctrl-tilt" min="5" max="85" value="45">
+        </div>
+
+        <div class="control-group">
+            <label>Horizontal Yaw: <span id="val-yaw" class="control-value">0°</span></label>
+            <input type="range" id="ctrl-yaw" min="0" max="360" value="0">
         </div>
 
         <div class="control-group">
