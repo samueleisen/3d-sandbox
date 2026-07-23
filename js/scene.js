@@ -20,18 +20,23 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
 dirLight.position.set(200, 450, 200);
 dirLight.castShadow = true;
 
-// Large orthographic shadow camera bounds to fit the play area (WORLD_WIDTH=1200, WORLD_DEPTH=600)
+// Asymmetric rectangular shadow camera bounds (expanded top and right)
 dirLight.shadow.mapSize.width = 2048;
 dirLight.shadow.mapSize.height = 2048;
-const dShadow = 650;
-dirLight.shadow.camera.left = -dShadow;
-dirLight.shadow.camera.right = dShadow;
-dirLight.shadow.camera.top = dShadow;
-dirLight.shadow.camera.bottom = -dShadow;
-dirLight.shadow.camera.near = 10;
-dirLight.shadow.camera.far = 1500;
-dirLight.shadow.bias = -0.0005;
+dirLight.shadow.camera.left = -350;
+dirLight.shadow.camera.right = 700; // Expanded right side ! human notice
+dirLight.shadow.camera.top = 700;   // Expanded top side
+dirLight.shadow.camera.bottom = -230;
+dirLight.shadow.camera.near = 300;
+dirLight.shadow.camera.far = 1000;
+dirLight.shadow.bias = -0.0003;
+dirLight.shadow.camera.updateProjectionMatrix();
 scene.add(dirLight);
+scene.add(dirLight.target);
+
+// ── Visual Shadow Camera Helper (shows the exact 3D shadow region) ──
+const shadowHelper = new THREE.CameraHelper(dirLight.shadow.camera);
+scene.add(shadowHelper);
 
 let aspect = window.innerWidth / window.innerHeight;
 let camera;

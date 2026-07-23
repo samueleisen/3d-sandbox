@@ -154,6 +154,13 @@ function updatePlayerController(dt) {
             if (walkAction) walkAction.fadeOut(0.10);
         }
 
+        // Prevent premature mid-air landing: hold mid-air descent pose (Frame 37 / 1.55s) until surface touchdown
+        if (jumpAction && jumpAction.isRunning()) {
+            if (jumpAction.time >= 1.55) {
+                jumpAction.time = 1.55;
+            }
+        }
+
         // Landing condition on current ground surface (floor or box top)
         if (py <= targetGroundY) {
             py = targetGroundY;
@@ -161,12 +168,10 @@ function updatePlayerController(dt) {
             isGrounded = true;
             justLanded = true;
 
-            // Frame 40 (1.6667s) Touchdown sync: blend recovery crouch (frames 40-48) on ground
+            // Frame 40 (1.6667s) Touchdown sync: play recovery crouch (frames 40-48) on surface
             if (jumpAction) {
-                if (jumpAction.time < 1.6667) {
-                    jumpAction.time = 1.6667;
-                }
-                jumpAction.fadeOut(0.30);
+                jumpAction.time = 1.6667; // Force exact touchdown frame (Frame 40)
+                jumpAction.fadeOut(0.30); // Play impact recovery crouch (frames 40-48) on ground
             }
         }
     } else {

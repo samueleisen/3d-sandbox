@@ -37,9 +37,9 @@ function createBorderWall(width, depth, x, z) {
 
 const wallThick = 4;
 createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0, -HALF_DEPTH - wallThick / 2); // North
-createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0,  HALF_DEPTH + wallThick / 2); // South
+createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0, HALF_DEPTH + wallThick / 2); // South
 createBorderWall(wallThick, WORLD_DEPTH, -HALF_WIDTH - wallThick / 2, 0);                  // West
-createBorderWall(wallThick, WORLD_DEPTH,  HALF_WIDTH + wallThick / 2, 0);                  // East
+createBorderWall(wallThick, WORLD_DEPTH, HALF_WIDTH + wallThick / 2, 0);                  // East
 
 /* ── Obstacles  (3 distinct cubes with real shadows) ── */
 const obstacles = []; // { mesh, box } — consumed by collision.js
@@ -66,7 +66,7 @@ function createObstacle(sx, sy, sz, px, py, pz, topColor, sideColor) {
 }
 
 // Obstacle 1  — tall red pillar
-createObstacle(60, 80, 60, -180, 0, -120, PAL.obs1Top, PAL.obs1Side);
+createObstacle(60, 80, 60, -180, 60, -120, PAL.obs1Top, PAL.obs1Side);
 // Obstacle 2  — wide blue block
 createObstacle(120, 40, 60, 200, 0, 160, PAL.obs2Top, PAL.obs2Side);
 // Obstacle 3  — medium gold cube
