@@ -7,7 +7,7 @@
    read by loop.js each frame.                      */
 const animLeafMeshes = [];
 const leafParticles  = [];
-const particleGeo    = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+const particleGeo    = new THREE.BoxGeometry(1.5, 1.5, 1.5);
 
 /* ────────────────────────────────────────────────
     DIORAMA BOX TREE
@@ -17,9 +17,9 @@ const particleGeo    = new THREE.BoxGeometry(2.5, 2.5, 2.5);
 ──────────────────────────────────────────────── */
 function createTree(px, pz, scale = 1.0) {
     // ── Trunk ──────────────────────────────────────
-    const trunkW = 12 * scale;
-    const trunkD = 12 * scale;
-    const trunkHeight = 55 * scale;
+    const trunkW = 8 * scale;
+    const trunkD = 8 * scale;
+    const trunkHeight = 38 * scale;
 
     const trunkGeo = new THREE.BoxGeometry(trunkW, trunkHeight, trunkD);
 
@@ -42,8 +42,8 @@ function createTree(px, pz, scale = 1.0) {
 
     // ── Leaf Disc Layers ────────────────────────────
     const numDiscs       = 4;
-    const discBaseRadius = 36 * scale;
-    const discSpacing    = 16 * scale; // vertical gap between discs
+    const discBaseRadius = 24 * scale;
+    const discSpacing    = 11 * scale; // vertical gap between discs
     const discBaseY      = trunkHeight * 0.62; // start at 62% of trunk height
 
     for (let i = 0; i < numDiscs; i++) {
@@ -162,8 +162,8 @@ function createTree(px, pz, scale = 1.0) {
         baseRotY: vertMesh2.rotation.y,
     });
 
-    // Spawn falling leaf particles for this tree
-    const numParticles = 6;
+    // Spawn falling leaf particles for this tree (reduced to 3 for performance)
+    const numParticles = 3;
     for (let i = 0; i < numParticles; i++) {
         const py    = discBaseY + Math.random() * numDiscs * discSpacing;
         const pxOff = (Math.random() - 0.5) * discBaseRadius * 1.4;
@@ -198,9 +198,9 @@ function createTree(px, pz, scale = 1.0) {
 /* ── Bushes  (Low-poly walk-through decorations) ── */
 function createBush(px, pz, scale = 1.0) {
     const bushParts = [
-        { r: 14, ox:  0, oy: 8, oz:  0 },
-        { r: 10, ox: -8, oy: 6, oz: -6 },
-        { r: 11, ox:  8, oy: 5, oz:  6 }
+        { r: 9, ox:  0, oy: 5, oz:  0 },
+        { r: 7, ox: -5, oy: 4, oz: -4 },
+        { r: 7, ox:  5, oy: 3.5, oz:  4 }
     ];
 
     bushParts.forEach(part => {
@@ -209,7 +209,7 @@ function createBush(px, pz, scale = 1.0) {
         const oy = part.oy * scale;
         const oz = part.oz * scale;
 
-        const bushGeo  = new THREE.SphereGeometry(r, 8, 6);
+        const bushGeo  = new THREE.SphereGeometry(r, 6, 5);
         const bushMat  = new THREE.MeshStandardMaterial({ color: PAL.treeLeavesSide, roughness: 0.8, metalness: 0.1 });
         const bushMesh = new THREE.Mesh(bushGeo, bushMat);
         bushMesh.position.set(px + ox, oy, pz + oz);

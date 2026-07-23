@@ -15,6 +15,7 @@ const CAM_LERP = 8; // higher = snappier
 // Reusable frustum calculation objects (prevents GC allocation per frame)
 const cameraFrustum = new THREE.Frustum();
 const projScreenMatrix = new THREE.Matrix4();
+const cullingSphere = new THREE.Sphere();
 let totalCulledObjects = 0;
 
 function animate() {
@@ -52,103 +53,191 @@ function animate() {
     let activeObjectsCount = 0;
     let totalTrackedObjects = 0;
 
-    /* ── Leaf Rustling Animation with Frustum Culling ── */
+    // Wide inner distance threshold (35% of maxVisDist) for a very slow, gentle shrink transition
+    const innerDist = maxVisDist * 0.35;
+    const innerDistSq = innerDist * innerDist;
+
+    // Helper for smoothstep easing fade (keeps scale high for longer, easing down gradually)
+    function calcSmoothFade(distSq) {
+        if (distSq <= innerDistSq) return 1.0;
+        if (distSq >= maxVisDistSq) return 0.0;
+        const dist = Math.sqrt(distSq);
+        const t = (dist - innerDist) / (maxVisDist - innerDist);
+        return 1.0 - (t * t * (3 - 2 * t));
+    }
+
+    /* ── Leaf Rustling Animation with Smooth Dissolve & LOD Culling ── */
     animLeafMeshes.forEach(item => {
         totalTrackedObjects++;
-        // View Frustum Culling: skip CPU animation math & GPU draw if off-screen
-        if (!cameraFrustum.intersectsObject(item.mesh)) {
+        let fadeAlpha = 1.0;
+
+        if (cullingMode !== 'off') {
+            const dx = item.px - px;
+            const dz = item.pz - pz;
+            const distSq = dx * dx + dz * dz;
+
+            // 1. Distance Culling
+            if (distSq > maxVisDistSq) {
+                item.mesh.visible = false;
+                if (item.line) item.line.visible = false;
+                return;
+            }
+
+            // 2. Forgiving View Frustum Culling
+            cullingSphere.center.set(item.px, item.oy, item.pz);
+            cullingSphere.radius = (item.baseRadius || 30) * item.baseScale + cullingMargin;
+
+            if (!cameraFrustum.intersectsSphere(cullingSphere)) {
+                item.mesh.visible = false;
+                if (item.line) item.line.visible = false;
+                return;
+            }
+
+            // 3. Slow Gentle Smoothstep Dissolve Fade
+            fadeAlpha = calcSmoothFade(distSq);
+        }
+
+        if (fadeAlpha <= 0.001) {
             item.mesh.visible = false;
             if (item.line) item.line.visible = false;
             return;
         }
+
         item.mesh.visible = true;
         if (item.line) item.line.visible = true;
         activeObjectsCount++;
 
-        const wobble = Math.sin(time * item.speed + item.phaseOffset);
+        // Smooth Scale Dissolve factor
+        const scaleFade = item.baseScale * fadeAlpha;
+
+        // LOD Animation Math Bypass for distant objects
+        const isFarLOD = fadeAlpha < 0.4;
+        const wobble = isFarLOD ? 0 : Math.sin(time * item.speed + item.phaseOffset);
 
         if (item.isDisc) {
-            // For diorama leaf discs: gentle tilt sway (rotation-based, not scale)
-            item.mesh.rotation.z = item.baseRotZ + wobble * 0.035;
-            item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.5 + item.phaseOffset) * 0.04;
-            // Subtle vertical bob
-            item.mesh.position.y = item.oy + Math.sin(time * item.speed * 0.3 + item.phaseOffset) * 0.8 * item.baseScale;
-            if (item.line) {
-                item.line.rotation.copy(item.mesh.rotation);
-                item.line.position.copy(item.mesh.position);
+            item.mesh.scale.set(scaleFade, scaleFade, scaleFade);
+            if (!isFarLOD) {
+                item.mesh.rotation.z = item.baseRotZ + wobble * 0.035;
+                item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.5 + item.phaseOffset) * 0.04;
+                item.mesh.position.y = item.oy + Math.sin(time * item.speed * 0.3 + item.phaseOffset) * 0.8 * item.baseScale;
             }
         } else if (item.isVertPlane) {
-            // For vertical cross-planes: translate/rotate sway to match the wind
-            const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.8 * item.baseScale;
-            const swayZ = Math.sin(time * item.speed * 0.4 + item.phaseOffset) * 1.8 * item.baseScale;
-            // Subtle tilt sway on rotation
-            item.mesh.rotation.z = item.baseRotZ + wobble * 0.025;
-            item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.35 + item.phaseOffset) * 0.03;
-
-            item.mesh.position.set(item.px + swayX, item.oy, item.pz + swayZ);
-            if (item.line) {
-                item.line.rotation.copy(item.mesh.rotation);
-                item.line.position.copy(item.mesh.position);
+            item.mesh.scale.set(scaleFade, scaleFade, scaleFade);
+            if (!isFarLOD) {
+                const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.8 * item.baseScale;
+                const swayZ = Math.sin(time * item.speed * 0.4 + item.phaseOffset) * 1.8 * item.baseScale;
+                item.mesh.rotation.z = item.baseRotZ + wobble * 0.025;
+                item.mesh.rotation.y = item.baseRotY + Math.cos(time * item.speed * 0.35 + item.phaseOffset) * 0.03;
+                item.mesh.position.set(item.px + swayX, item.oy, item.pz + swayZ);
             }
         } else {
-            // Legacy sphere/bush sway (scale-based)
-            const currentScale = item.baseScale * (1.0 + wobble * 0.04);
+            // Bushes
+            const currentScale = scaleFade * (1.0 + wobble * 0.04);
             item.mesh.scale.set(currentScale, currentScale, currentScale);
-            if (item.line) item.line.scale.set(currentScale, currentScale, currentScale);
-
-            const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
-            const swayZ = Math.sin(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
-            item.mesh.position.set(item.px + item.ox + swayX, item.trunkHeight + item.oy, item.pz + item.oz + swayZ);
-            if (item.line) item.line.position.copy(item.mesh.position);
+            if (!isFarLOD) {
+                const swayX = Math.cos(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
+                const swayZ = Math.sin(time * item.speed * 0.4 + item.phaseOffset) * 1.5 * item.baseScale;
+                item.mesh.position.set(item.px + item.ox + swayX, item.trunkHeight + item.oy, item.pz + item.oz + swayZ);
+            }
         }
     });
 
-    /* ── Falling Leaves Animation with Frustum Culling ── */
+    /* ── Falling Leaves Animation with Smooth Dissolve & LOD Culling ── */
     leafParticles.forEach(p => {
         totalTrackedObjects++;
-        // View Frustum Culling: skip CPU physics math & GPU draw if off-screen
-        if (!cameraFrustum.intersectsObject(p.mesh)) {
+        let pFade = 1.0;
+
+        if (cullingMode !== 'off') {
+            const dx = p.baseX - px;
+            const dz = p.baseZ - pz;
+            const distSq = dx * dx + dz * dz;
+
+            if (distSq > maxVisDistSq) {
+                p.mesh.visible = false;
+                return;
+            }
+
+            cullingSphere.center.copy(p.mesh.position);
+            cullingSphere.radius = 15 + cullingMargin;
+
+            if (!cameraFrustum.intersectsSphere(cullingSphere)) {
+                p.mesh.visible = false;
+                return;
+            }
+
+            pFade = calcSmoothFade(distSq);
+        }
+
+        if (pFade <= 0.001) {
             p.mesh.visible = false;
             return;
         }
+
         p.mesh.visible = true;
+        p.mesh.scale.setScalar(pFade);
         activeObjectsCount++;
 
-        p.mesh.position.x += p.vx * dt;
-        p.mesh.position.y += p.vy * dt;
-        p.mesh.position.z += p.vz * dt;
+        // Only update physics for near particles (LOD optimization)
+        if (pFade >= 0.35) {
+            p.mesh.position.x += p.vx * dt;
+            p.mesh.position.y += p.vy * dt;
+            p.mesh.position.z += p.vz * dt;
+            p.mesh.rotation.x += p.rotXSpeed * dt;
+            p.mesh.rotation.y += p.rotYSpeed * dt;
+            p.mesh.position.x += Math.sin(time * 3 + p.mesh.position.y * 0.1) * 0.15;
 
-        // Tumbling rotation
-        p.mesh.rotation.x += p.rotXSpeed * dt;
-        p.mesh.rotation.y += p.rotYSpeed * dt;
-
-        // Wind sway drift (flutter)
-        p.mesh.position.x += Math.sin(time * 3 + p.mesh.position.y * 0.1) * 0.15;
-
-        // Reset particle if it touches the floor (y <= 1.0)
-        if (p.mesh.position.y <= 1.0) {
-            p.mesh.position.y = p.trunkHeight + (20 + Math.random() * 20) * p.scale;
-            p.mesh.position.x = p.baseX + (Math.random() - 0.5) * 45 * p.scale;
-            p.mesh.position.z = p.baseZ + (Math.random() - 0.5) * 45 * p.scale;
+            if (p.mesh.position.y <= 1.0) {
+                p.mesh.position.y = p.trunkHeight + (20 + Math.random() * 20) * p.scale;
+                p.mesh.position.x = p.baseX + (Math.random() - 0.5) * 45 * p.scale;
+                p.mesh.position.z = p.baseZ + (Math.random() - 0.5) * 45 * p.scale;
+            }
         }
     });
 
-    /* ── Flower Swaying Animation with Frustum Culling ── */
+    /* ── Flower Swaying Animation with Smooth Dissolve & LOD Culling ── */
     animFlowers.forEach(f => {
         totalTrackedObjects++;
-        // View Frustum Culling: skip CPU animation math & GPU draw if off-screen
-        if (!cameraFrustum.intersectsObject(f.mesh)) {
+        let fFade = 1.0;
+
+        if (cullingMode !== 'off') {
+            const dx = f.baseX - px;
+            const dz = f.baseZ - pz;
+            const distSq = dx * dx + dz * dz;
+
+            if (distSq > maxVisDistSq) {
+                f.mesh.visible = false;
+                if (f.line) f.line.visible = false;
+                return;
+            }
+
+            cullingSphere.center.set(f.baseX, f.y, f.baseZ);
+            cullingSphere.radius = 15 + cullingMargin;
+
+            if (!cameraFrustum.intersectsSphere(cullingSphere)) {
+                f.mesh.visible = false;
+                if (f.line) f.line.visible = false;
+                return;
+            }
+
+            fFade = calcSmoothFade(distSq);
+        }
+
+        if (fFade <= 0.001) {
             f.mesh.visible = false;
             if (f.line) f.line.visible = false;
             return;
         }
+
         f.mesh.visible = true;
         if (f.line) f.line.visible = true;
+        f.mesh.scale.set(fFade, fFade, fFade);
         activeObjectsCount++;
 
-        const sway = Math.sin(time * f.speed + f.phaseOffset) * 0.8 * f.scale;
-        f.mesh.position.x = f.baseX + sway;
-        if (f.line) f.line.position.copy(f.mesh.position);
+        if (fFade >= 0.35) {
+            const sway = Math.sin(time * f.speed + f.phaseOffset) * 0.8 * f.scale;
+            f.mesh.position.x = f.baseX + sway;
+            if (f.line) f.line.position.copy(f.mesh.position);
+        }
     });
 
     /* ── View-Frustum Aligned & Texel-Snapped Shadow Tracking ── */

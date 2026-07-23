@@ -21,13 +21,13 @@ dirLight.position.set(200, 450, 200);
 dirLight.castShadow = true;
 
 // Asymmetric rectangular shadow camera bounds (expanded top and right)
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
-dirLight.shadow.camera.left = -350;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.left = -500;
 dirLight.shadow.camera.right = 700; // Expanded right side ! human notice
 dirLight.shadow.camera.top = 700;   // Expanded top side
-dirLight.shadow.camera.bottom = -230;
-dirLight.shadow.camera.near = 300;
+dirLight.shadow.camera.bottom = -430;
+dirLight.shadow.camera.near = 250;
 dirLight.shadow.camera.far = 1000;
 dirLight.shadow.bias = -0.0003;
 dirLight.shadow.camera.updateProjectionMatrix();

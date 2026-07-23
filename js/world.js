@@ -66,22 +66,28 @@ function createObstacle(sx, sy, sz, px, py, pz, topColor, sideColor) {
 }
 
 // Obstacle 1  — tall red pillar
-createObstacle(60, 80, 60, -180, 60, -120, PAL.obs1Top, PAL.obs1Side);
+createObstacle(40, 55, 40, -180, 0, -120, PAL.obs1Top, PAL.obs1Side);
 // Obstacle 2  — wide blue block
-createObstacle(120, 40, 60, 200, 0, 160, PAL.obs2Top, PAL.obs2Side);
+createObstacle(80, 28, 40, 200, 0, 160, PAL.obs2Top, PAL.obs2Side);
 // Obstacle 3  — medium gold cube
-createObstacle(50, 55, 50, 80, 0, -280, PAL.obs3Top, PAL.obs3Side);
+createObstacle(35, 38, 35, 80, 0, -280, PAL.obs3Top, PAL.obs3Side);
 
-/* ── Ambient Decoration  (scattered ground markers) ── */
-const dotGeo = new THREE.CircleGeometry(2.5, 8);
-const dotMat = new THREE.MeshBasicMaterial({ color: 0x3a3a5c, transparent: true, opacity: 0.3 });
-for (let i = 0; i < 80; i++) {
-    const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.rotation.x = -Math.PI / 2;
-    dot.position.set(
+/* ── Ambient Decoration  (scattered ground markers - Instanced for maximum performance) ── */
+const dotCount = 80;
+const dotGeo = new THREE.CircleGeometry(1.8, 4);
+const dotMat = new THREE.MeshBasicMaterial({ color: 0x3a3a5c, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+const dotInstancedMesh = new THREE.InstancedMesh(dotGeo, dotMat, dotCount);
+const _dummyDot = new THREE.Object3D();
+
+for (let i = 0; i < dotCount; i++) {
+    _dummyDot.position.set(
         (Math.random() - 0.5) * WORLD_WIDTH * 0.9,
         0.3,
         (Math.random() - 0.5) * WORLD_DEPTH * 0.9
     );
-    scene.add(dot);
+    _dummyDot.rotation.x = -Math.PI / 2;
+    _dummyDot.updateMatrix();
+    dotInstancedMesh.setMatrixAt(i, _dummyDot.matrix);
 }
+dotInstancedMesh.instanceMatrix.needsUpdate = true;
+scene.add(dotInstancedMesh);

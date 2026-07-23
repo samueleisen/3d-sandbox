@@ -1,8 +1,8 @@
 /* ───────────────────────────────────────────────
     CONSTANTS
 ─────────────────────────────────────────────── */
-const WORLD_WIDTH = 1200;
-const WORLD_DEPTH = 600;
+const WORLD_WIDTH = 3000;
+const WORLD_DEPTH = 3000;
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
 const PLAYER_SPEED = 120;          // units/sec max speed
@@ -14,6 +14,13 @@ const EDGE_WALL_H = 20;
 const JUMP_POWER = 300;           // initial vertical jump velocity (units/sec)
 const JUMP_GRAVITY = 180;         // gravity acceleration (units/sec²) — 40 frames / 1.6667s airtime
 const GRAVITY = 15;               // world gravity acceleration (m/s²) 9.81
+
+// Mutable Culling & Render State (controlled via UI)
+let cullingMode = 'generous';         // 'generous', 'balanced', 'aggressive', 'off'
+let maxVisDist = 1200;                // max view distance units
+let maxVisDistSq = maxVisDist * maxVisDist;
+let cullingMargin = 80;               // safety padding margin to prevent edge popping
+let renderScale = 1.0;                // render resolution multiplier (1.0, 0.75, 0.5)
 
 // Mutable Camera State
 let cameraType = 'persp';

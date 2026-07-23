@@ -8,13 +8,13 @@
  * Generates a tiled smooth wood texture on a canvas.
  * Horizontal planks with subtle color variation, knots, and grain lines.
  */
-function makeWoodTexture(tw = 128, th = 256) {
+function makeWoodTexture(tw = 64, th = 128) {
     const canvas = document.createElement('canvas');
     canvas.width = tw;
     canvas.height = th;
     const ctx = canvas.getContext('2d');
 
-    const plankH = 32; // px per plank row
+    const plankH = 16; // px per plank row
     const baseColors = [0x56341c, 0x6a3f22, 0x4e2f18, 0x5c3720];
 
     for (let row = 0; row < th / plankH; row++) {
@@ -40,13 +40,13 @@ function makeWoodTexture(tw = 128, th = 256) {
     }
 
     // Add a few knot dots
-    [[24, 48], [96, 144], [56, 208]].forEach(([kx, ky]) => {
+    [[12, 24], [48, 72], [28, 104]].forEach(([kx, ky]) => {
         ctx.beginPath();
-        ctx.arc(kx, ky, 6, 0, Math.PI * 2);
+        ctx.arc(kx, ky, 3, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(20,10,5,0.4)';
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(kx, ky, 3, 0, Math.PI * 2);
+        ctx.arc(kx, ky, 1.5, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(90,50,20,0.6)';
         ctx.fill();
     });
@@ -61,7 +61,7 @@ function makeWoodTexture(tw = 128, th = 256) {
  * Generates a smooth leaf canopy disc texture with organic silhouettes,
  * transparent gaps, twigs/branches, and custom ambient occlusion shading.
  */
-function makeLeafDiscTexture(size = 256, layer = 0) {
+function makeLeafDiscTexture(size = 128, layer = 0) {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -81,12 +81,12 @@ function makeLeafDiscTexture(size = 256, layer = 0) {
 
     const cx = size / 2;
     const cy = size / 2;
-    const radius = size / 2 - 4;
-    const cellSize = 1; // size of 1 for smooth high-res rendering
+    const radius = size / 2 - 2;
+    const cellSize = 1;
 
     // 1. Draw organic twigs radiating from center (underneath leaves)
     ctx.strokeStyle = '#3d2818';
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 3;
     const numBranches = 4 + (layer % 2);
     for (let b = 0; b < numBranches; b++) {
         const bAngle = (b * Math.PI * 2) / numBranches + (layer * 0.45);
@@ -114,14 +114,14 @@ function makeLeafDiscTexture(size = 256, layer = 0) {
             if (dist > r_limit) continue; // outside organic silhouette
 
             // Natural transparent leaf gaps (noise-based)
-            const gapNoise = Math.sin(x * 0.08) * Math.cos(y * 0.08) + Math.sin(x * 0.18 + y * 0.1);
+            const gapNoise = Math.sin(x * 0.16) * Math.cos(y * 0.16) + Math.sin(x * 0.36 + y * 0.2);
             if (gapNoise > 1.25 && dist > radius * 0.22) {
                 continue; // transparent leaf gap
             }
 
             // Shading: Ambient Occlusion near center, Highlights on outer bounds
             const normDist = dist / r_limit;
-            const shadingNoise = (Math.sin(x * 0.85 + y * 1.15) * 0.5 + 0.5) * 0.2 - 0.1;
+            const shadingNoise = (Math.sin(x * 1.7 + y * 2.3) * 0.5 + 0.5) * 0.2 - 0.1;
             const factor = THREE.MathUtils.clamp(normDist + shadingNoise, 0, 1);
 
             let colorIdx;
@@ -152,7 +152,7 @@ function makeLeafDiscTexture(size = 256, layer = 0) {
  * Generates a smooth vertical tree canopy texture with organic silhouette,
  * central branch lines, natural gaps, and baked depth/shadow highlights.
  */
-function makeLeafVerticalTexture(w = 256, h = 256) {
+function makeLeafVerticalTexture(w = 128, h = 128) {
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
@@ -164,11 +164,11 @@ function makeLeafVerticalTexture(w = 256, h = 256) {
     const pal = [0x56c15a, 0x43a047, 0x76cc7a, 0x388e3c];
 
     const cx = w / 2;
-    const cellSize = 1; // size of 1 for smooth high-res rendering
+    const cellSize = 1;
 
     // Draw simple center trunk branch pixels first (bottom to 20% of top)
     ctx.fillStyle = '#3d2818';
-    ctx.fillRect(cx - 5, h * 0.2, 10, h * 0.8);
+    ctx.fillRect(cx - 3, h * 0.2, 6, h * 0.8);
 
     for (let y = 0; y < h; y += cellSize) {
         // Taper shape: narrow at top (y=0), wide in middle, slightly tapering at bottom
@@ -193,12 +193,12 @@ function makeLeafVerticalTexture(w = 256, h = 256) {
             if (dist > r_limit) continue;
 
             // Natural transparent gaps in vertical canopy
-            const gapNoise = Math.sin(x * 0.08) * Math.cos(y * 0.08) + Math.sin(x * 0.18 + y * 0.12);
+            const gapNoise = Math.sin(x * 0.16) * Math.cos(y * 0.16) + Math.sin(x * 0.36 + y * 0.24);
             if (gapNoise > 1.3 && dist > w * 0.12) continue;
 
             // Shading: Highlights at top/edges, shadow/AO near bottom-center
             const normDist = dist / r_limit;
-            const shadingNoise = (Math.sin(x * 0.8 + y * 1.1) * 0.5 + 0.5) * 0.2 - 0.1;
+            const shadingNoise = (Math.sin(x * 1.6 + y * 2.2) * 0.5 + 0.5) * 0.2 - 0.1;
             const factor = THREE.MathUtils.clamp((normDist * 0.5 + (y / h) * 0.5) + shadingNoise, 0, 1);
 
             let colorIdx;
@@ -226,7 +226,7 @@ function makeLeafVerticalTexture(w = 256, h = 256) {
 }
 
 /* ── Pre-build shared texture instances (re-used across all trees) ── */
-const woodTex = makeWoodTexture(128, 256);
+const woodTex = makeWoodTexture(64, 128);
 woodTex.repeat.set(1, 2);
-const leafTextures = [0, 1, 2, 3].map(i => makeLeafDiscTexture(256, i));
-const leafVertTex = makeLeafVerticalTexture(256, 256);
+const leafTextures = [0, 1, 2, 3].map(i => makeLeafDiscTexture(128, i));
+const leafVertTex = makeLeafVerticalTexture(128, 128);

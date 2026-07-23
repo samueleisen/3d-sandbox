@@ -67,6 +67,30 @@
             <label>Ortho View Size: <span id="val-size" class="control-value">420</span></label>
             <input type="range" id="ctrl-size" min="150" max="800" value="420">
         </div>
+
+        <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px;">
+            <label>Culling (Object Hiding)</label>
+            <select id="ctrl-culling-mode">
+                <option value="generous" selected>Generous (Forgiving)</option>
+                <option value="balanced">Balanced</option>
+                <option value="aggressive">Aggressive (High FPS)</option>
+                <option value="off">Off (Render All)</option>
+            </select>
+        </div>
+
+        <div class="control-group" id="group-culling-dist">
+            <label>Max View Distance: <span id="val-culling-dist" class="control-value">1200</span></label>
+            <input type="range" id="ctrl-culling-dist" min="400" max="2500" step="50" value="1200">
+        </div>
+
+        <div class="control-group">
+            <label>Render Quality (Resolution Scale)</label>
+            <select id="ctrl-render-scale">
+                <option value="1.0" selected>100% Native (1.0x)</option>
+                <option value="0.75">75% Balanced (0.75x)</option>
+                <option value="0.50">50% Performance (0.50x)</option>
+            </select>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

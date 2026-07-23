@@ -8,7 +8,7 @@ const animFlowers = [];
 
 function createFlowerBed(px, pz, scale = 1.0) {
     // Soil base
-    const soilGeo  = new THREE.CircleGeometry(20 * scale, 12);
+    const soilGeo  = new THREE.CircleGeometry(14 * scale, 8);
     const soilMat  = new THREE.MeshStandardMaterial({
         color: PAL.flowerSoil,
         roughness: 0.9,
@@ -22,15 +22,15 @@ function createFlowerBed(px, pz, scale = 1.0) {
 
     // Small flowers
     const flowerColors = [PAL.flowerRed, PAL.flowerYellow, PAL.flowerPink];
-    const numFlowers   = 7;
-    const flowerGeo    = new THREE.BoxGeometry(2.5 * scale, 5 * scale, 2.5 * scale);
+    const numFlowers   = 5;
+    const flowerGeo    = new THREE.BoxGeometry(1.8 * scale, 3.5 * scale, 1.8 * scale);
 
     for (let i = 0; i < numFlowers; i++) {
         const angle  = Math.random() * Math.PI * 2;
-        const radius = Math.random() * 14 * scale;
+        const radius = Math.random() * 10 * scale;
         const fx     = px + Math.cos(angle) * radius;
         const fz     = pz + Math.sin(angle) * radius;
-        const fy     = 0.52 + (5 * scale) / 2;
+        const fy     = 0.52 + (3.5 * scale) / 2;
 
         const fColor    = flowerColors[Math.floor(Math.random() * flowerColors.length)];
         const flowerMat  = new THREE.MeshStandardMaterial({

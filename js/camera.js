@@ -26,16 +26,21 @@ const ctrlTilt   = document.getElementById('ctrl-tilt');
 const ctrlYaw    = document.getElementById('ctrl-yaw');
 const ctrlHeight = document.getElementById('ctrl-height');
 const ctrlFov    = document.getElementById('ctrl-fov');
-const ctrlSize   = document.getElementById('ctrl-size');
+const ctrlSize        = document.getElementById('ctrl-size');
+const ctrlCullingMode = document.getElementById('ctrl-culling-mode');
+const ctrlCullingDist = document.getElementById('ctrl-culling-dist');
+const ctrlRenderScale = document.getElementById('ctrl-render-scale');
 
-const valTilt   = document.getElementById('val-tilt');
-const valYaw    = document.getElementById('val-yaw');
-const valHeight = document.getElementById('val-height');
-const valFov    = document.getElementById('val-fov');
-const valSize   = document.getElementById('val-size');
+const valTilt        = document.getElementById('val-tilt');
+const valYaw         = document.getElementById('val-yaw');
+const valHeight      = document.getElementById('val-height');
+const valFov         = document.getElementById('val-fov');
+const valSize        = document.getElementById('val-size');
+const valCullingDist = document.getElementById('val-culling-dist');
 
-const groupFov  = document.getElementById('group-fov');
-const groupSize = document.getElementById('group-size');
+const groupFov        = document.getElementById('group-fov');
+const groupSize       = document.getElementById('group-size');
+const groupCullingDist= document.getElementById('group-culling-dist');
 
 function syncUI() {
     cameraType  = ctrlType.value;
@@ -44,6 +49,18 @@ function syncUI() {
     camHeight   = parseFloat(ctrlHeight.value);
     camFov      = parseFloat(ctrlFov.value);
     camViewSize = parseFloat(ctrlSize.value);
+
+    if (ctrlCullingMode) cullingMode = ctrlCullingMode.value;
+    if (ctrlCullingDist) {
+        maxVisDist = parseFloat(ctrlCullingDist.value);
+        maxVisDistSq = maxVisDist * maxVisDist;
+    }
+    if (ctrlRenderScale) {
+        renderScale = parseFloat(ctrlRenderScale.value);
+        if (typeof renderer !== 'undefined') {
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * renderScale);
+        }
+    }
 
     updateUISliders();
 
@@ -71,12 +88,56 @@ function updateUISliders() {
 
     if (ctrlSize) ctrlSize.value = camViewSize;
     if (valSize) valSize.textContent = Math.round(camViewSize);
+
+    if (ctrlCullingDist) ctrlCullingDist.value = maxVisDist;
+    if (valCullingDist) valCullingDist.textContent = Math.round(maxVisDist);
+
+    if (ctrlRenderScale) ctrlRenderScale.value = renderScale;
 }
 
 ctrlType.addEventListener('change', () => {
     syncUI();
     initCamera();
 });
+
+if (ctrlRenderScale) {
+    ctrlRenderScale.addEventListener('change', () => {
+        renderScale = parseFloat(ctrlRenderScale.value);
+        if (typeof renderer !== 'undefined') {
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * renderScale);
+        }
+    });
+}
+
+if (ctrlCullingMode) {
+    ctrlCullingMode.addEventListener('change', () => {
+        cullingMode = ctrlCullingMode.value;
+        if (cullingMode === 'generous') {
+            maxVisDist = 1200;
+            cullingMargin = 100;
+        } else if (cullingMode === 'balanced') {
+            maxVisDist = 800;
+            cullingMargin = 60;
+        } else if (cullingMode === 'aggressive') {
+            maxVisDist = 500;
+            cullingMargin = 30;
+        } else if (cullingMode === 'off') {
+            maxVisDist = 99999;
+            cullingMargin = 200;
+        }
+        maxVisDistSq = maxVisDist * maxVisDist;
+        if (groupCullingDist) groupCullingDist.style.display = cullingMode === 'off' ? 'none' : '';
+        updateUISliders();
+    });
+}
+
+if (ctrlCullingDist) {
+    ctrlCullingDist.addEventListener('input', () => {
+        maxVisDist = parseFloat(ctrlCullingDist.value);
+        maxVisDistSq = maxVisDist * maxVisDist;
+        if (valCullingDist) valCullingDist.textContent = Math.round(maxVisDist);
+    });
+}
 
 ctrlTilt.addEventListener('input', () => {
     camAngleDeg = parseFloat(ctrlTilt.value);
