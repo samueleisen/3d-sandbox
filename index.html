@@ -96,6 +96,20 @@
                 Show FOV Vision Boundary Lines
             </label>
         </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="ctrl-shadow-helper" style="width: auto; cursor: pointer;">
+                Show Shadow Camera Frustum Debug
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="ctrl-light-helper" checked style="width: auto; cursor: pointer;">
+                Show Light Ray & Discrete Step Helper
+            </label>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -111,6 +125,7 @@
     <script src="js/world.js"></script>
     <script src="js/grass.js"></script>
     <script src="js/cameraFOVHelper.js"></script>
+    <script src="js/lightHelper.js"></script>
     <script src="js/scenePlacement.js"></script>
 
     <!-- Character & Systems -->

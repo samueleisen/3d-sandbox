@@ -65,6 +65,11 @@ function animate() {
         updateCameraFOVHelper(px, py, pz);
     }
 
+    /* ── Light Direction & Discrete Texel Step Helper ── */
+    if (typeof updateLightHelper === 'function') {
+        updateLightHelper();
+    }
+
     /* ── Camera 3D Orbit Tracking ── */
 
     const pitchRad = THREE.MathUtils.degToRad(camAngleDeg);
@@ -80,31 +85,38 @@ function animate() {
     camera.position.z = pz + camOffsetZ;
     camera.lookAt(px, py + 12, pz);
 
-    /* ── View-Frustum Aligned & Texel-Snapped Shadow Tracking ── */
-    // Camera forward unit vector on horizontal ground plane
-    const fwdX = -Math.sin(yawRad);
-    const fwdZ = -Math.cos(yawRad);
-
-    // Shift shadow box center forward (in front of player/camera)
-    const SHADOW_FORWARD_OFFSET = 500; // Shift shadow box forward for extended far grass shadows
-    const shadowTargetX = px + fwdX * SHADOW_FORWARD_OFFSET;
-    const shadowTargetY = 0; // Anchored to ground level
-    const shadowTargetZ = pz + fwdZ * SHADOW_FORWARD_OFFSET;
-
-    // Calculate light source offset
-    let shadowCamX = shadowTargetX + 200;
-    let shadowCamY = shadowTargetY + 450;
-    let shadowCamZ = shadowTargetZ + 200;
-
-    // Snap position to shadow map texel grid to stop shadow edge flickering during movement
+    /* ── World-Locked Player-Centered Wide Shadow Tracking (0% Camera Yaw Rotation Impact) ── */
+    // Calculate texel size of the 4000x4000 shadow camera frustum
     const shadowWidth = dirLight.shadow.camera.right - dirLight.shadow.camera.left;
     const texelSize = shadowWidth / dirLight.shadow.mapSize.width;
-    shadowCamX = Math.floor(shadowCamX / texelSize) * texelSize;
-    shadowCamZ = Math.floor(shadowCamZ / texelSize) * texelSize;
 
-    dirLight.position.set(shadowCamX, shadowCamY, shadowCamZ);
+    // Quantize player position directly to integer multiples of texelSize (World-Locked)
+    const shadowTargetX = Math.floor(px / texelSize) * texelSize;
+    const shadowTargetZ = Math.floor(pz / texelSize) * texelSize;
+    const shadowTargetY = 0; // Anchored to ground level
+
+    // Keep light position rigidly locked at high altitude offset (1000, 2500, 1000) for uniform parallel sunlight across all tall structures
+    dirLight.position.set(shadowTargetX + 1000, 2500, shadowTargetZ + 1000);
     dirLight.target.position.set(shadowTargetX, shadowTargetY, shadowTargetZ);
     dirLight.target.updateMatrixWorld();
+
+    // Dynamic Radial Distance Shadow Culling for Procedural Monuments / Obstacles (2700 units +50% threshold)
+    if (typeof obstacles !== 'undefined' && obstacles.length > 0) {
+        const shadowRadiusSq = 2700 * 2700; // 2700 units radial shadow vision threshold (+50% expansion)
+        for (let i = 0; i < obstacles.length; i++) {
+            const obs = obstacles[i];
+            if (obs && obs.mesh) {
+                const dx = obs.mesh.position.x - px;
+                const dz = obs.mesh.position.z - pz;
+                obs.mesh.castShadow = (dx * dx + dz * dz <= shadowRadiusSq);
+            }
+        }
+    }
+
+    // Dynamically update debug shadow camera helper when visible
+    if (typeof shadowHelper !== 'undefined' && shadowHelper.visible) {
+        shadowHelper.update();
+    }
 
     /* ── HUD ── */
     coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)}`;

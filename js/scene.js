@@ -17,25 +17,26 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-dirLight.position.set(200, 450, 200);
+dirLight.position.set(1000, 2500, 1000);
 dirLight.castShadow = true;
 
-// Asymmetric rectangular shadow camera bounds (expanded top and right)
-dirLight.shadow.mapSize.width = 1024;
-dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.left = -1000;
-dirLight.shadow.camera.right = 1400;
-dirLight.shadow.camera.top = 1400;
-dirLight.shadow.camera.bottom = -1000;
-dirLight.shadow.camera.near = 50;
-dirLight.shadow.camera.far = 2800;
-dirLight.shadow.bias = -0.0003;
+// Wide symmetric shadow camera bounds (4000x4000 units centered around player)
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.left = -2000;
+dirLight.shadow.camera.right = 2000;
+dirLight.shadow.camera.top = 2000;
+dirLight.shadow.camera.bottom = -2000;
+dirLight.shadow.camera.near = 100;
+dirLight.shadow.camera.far = 4500;
+dirLight.shadow.bias = -0.0002;
 dirLight.shadow.camera.updateProjectionMatrix();
 scene.add(dirLight);
 scene.add(dirLight.target);
 
-// ── Visual Shadow Camera Helper (shows the exact 3D shadow region) ──
+// ── Visual Shadow Camera Helper (hidden by default, toggleable via UI) ──
 const shadowHelper = new THREE.CameraHelper(dirLight.shadow.camera);
+shadowHelper.visible = false;
 scene.add(shadowHelper);
 
 let aspect = window.innerWidth / window.innerHeight;

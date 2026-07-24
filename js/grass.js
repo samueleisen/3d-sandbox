@@ -224,8 +224,7 @@ function createGrassLandscape(count = 5000) {
         shadowSide: THREE.DoubleSide
     });
 
-    // GLSL Shader Injection: 100% GPU-accelerated bending, wind sway, narrow FOV vision angle culling, and Geo-Morphing LOD
-    mat.onBeforeCompile = function (shader) {
+    function applyGrassShader(shader, isDepth = false) {
         shader.uniforms.uPlayerPos = grassUniforms.uPlayerPos;
         shader.uniforms.uCamPos = grassUniforms.uCamPos;
         shader.uniforms.uCamDir = grassUniforms.uCamDir;
@@ -244,6 +243,15 @@ function createGrassLandscape(count = 5000) {
             uniform float uMaxVisDist;
             uniform float uBendRadius;
         ` + shader.vertexShader;
+
+        const shadowCutoffChunk = isDepth ? `
+            if (distToCam > 1400.0) {
+                fadeAlpha = 0.0;
+            }
+            transformed *= fadeAlpha;
+        ` : `
+            transformed *= fadeAlpha;
+        `;
 
         shader.vertexShader = shader.vertexShader.replace(
             '#include <begin_vertex>',
@@ -286,8 +294,7 @@ function createGrassLandscape(count = 5000) {
                 }
             }
 
-            // Scale vertex smoothly down to 0 at view boundary
-            transformed *= fadeAlpha;
+            ${shadowCutoffChunk}
 
             // Height-based influence factor (0 at root y=0, 1 at top tip y=10)
             float heightFactor = clamp(position.y / 10.0, 0.0, 1.0);
@@ -308,28 +315,20 @@ function createGrassLandscape(count = 5000) {
             }
             `
         );
+    }
+
+    mat.onBeforeCompile = function (shader) {
+        applyGrassShader(shader, false);
     };
 
     grassInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
     grassInstancedMesh.castShadow = true;
     grassInstancedMesh.receiveShadow = true;
 
-    // Custom depth material for shadow pass (culls shadow map rendering beyond 1000 units)
+    // Custom depth material for shadow pass (culls shadow map rendering beyond 1400 units)
     const customDepthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     customDepthMat.onBeforeCompile = function (shader) {
-        mat.onBeforeCompile(shader);
-
-        // Inject Shadow Distance Culling (1000 units) into depth pass
-        shader.vertexShader = shader.vertexShader.replace(
-            'transformed *= fadeAlpha;',
-            `
-            // Shadow Distance Culling: collapse shadow depth geometry beyond 1800 units for far grass shadows
-            if (distToCam > 1400.0) {
-                fadeAlpha = 0.0;
-            }
-            transformed *= fadeAlpha;
-            `
-        );
+        applyGrassShader(shader, true);
     };
     grassInstancedMesh.customDepthMaterial = customDepthMat;
 

@@ -117,6 +117,24 @@ if (ctrlFovLines) {
     });
 }
 
+const ctrlShadowHelper = document.getElementById('ctrl-shadow-helper');
+if (ctrlShadowHelper) {
+    ctrlShadowHelper.addEventListener('change', () => {
+        if (typeof shadowHelper !== 'undefined') {
+            shadowHelper.visible = ctrlShadowHelper.checked;
+        }
+    });
+}
+
+const ctrlLightHelper = document.getElementById('ctrl-light-helper');
+if (ctrlLightHelper) {
+    ctrlLightHelper.addEventListener('change', () => {
+        if (typeof lightHelperEnabled !== 'undefined') {
+            lightHelperEnabled = ctrlLightHelper.checked;
+        }
+    });
+}
+
 if (ctrlRenderScale) {
     ctrlRenderScale.addEventListener('change', () => {
         renderScale = parseFloat(ctrlRenderScale.value);
