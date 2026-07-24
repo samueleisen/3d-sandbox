@@ -38,6 +38,23 @@ function animate() {
         updateHorizonDisplacement(px, pz);
     }
 
+    /* ── Animated Monuments (Floating Top Crystal & Multi Blue Energy Rings) ── */
+    if (typeof animatedMonuments !== 'undefined' && animatedMonuments.length > 0) {
+        for (let i = 0; i < animatedMonuments.length; i++) {
+            const m = animatedMonuments[i];
+            if (m.crystal) {
+                m.crystal.rotation.y += 0.8 * dt;
+            }
+            if (m.rings) {
+                for (let r = 0; r < m.rings.length; r++) {
+                    const rData = m.rings[r];
+                    rData.mesh.rotation.z += rData.speed * dt;
+                    rData.mesh.position.y = rData.baseY + Math.sin(time * 2.2 + r * 1.5 + i) * rData.oscAmp;
+                }
+            }
+        }
+    }
+
     /* ── Interactive Grass Collision Bending & Wind Sway ── */
     if (typeof updateGrassPhysics === 'function') {
         updateGrassPhysics(px, py, pz, dt, time);
