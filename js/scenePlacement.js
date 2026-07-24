@@ -6,5 +6,5 @@
 
 // Interactive Grass Field (InstancedMesh landscape)
 if (typeof createGrassLandscape === 'function') {
-    createGrassLandscape(200000);
+    createGrassLandscape(80000);
 }

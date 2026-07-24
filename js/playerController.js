@@ -131,6 +131,7 @@ function updatePlayerController(dt) {
         if (jumpAction) {
             jumpAction.reset();
             jumpAction.time = 0;
+            jumpAction.setEffectiveTimeScale(1.0);
             jumpAction.enabled = true;
             jumpAction.fadeIn(JUMP_LAUNCH_BLEND);
             jumpAction.play();
@@ -142,12 +143,21 @@ function updatePlayerController(dt) {
         velY -= JUMP_GRAVITY * dt;
         py += velY * dt;
 
+        // Speed up downward airborne animation transition so frames 20..37 reach landing pose briskly
+        if (jumpAction) {
+            if (velY < 0) {
+                jumpAction.setEffectiveTimeScale(1.75);
+            } else {
+                jumpAction.setEffectiveTimeScale(1.0);
+            }
+        }
+
         // Freefall transition: if falling without jumpAction active (e.g. stepped off ledge)
         if (velY < 0 && jumpAction && !jumpAction.isRunning()) {
             jumpAction.reset();
             jumpAction.time = 0.833; // Frame 20 (mid-air freefall descent pose)
             jumpAction.enabled = true;
-            jumpAction.setEffectiveWeight(1.0);
+            jumpAction.setEffectiveTimeScale(1.75);
             jumpAction.play();
 
             if (idleAction) idleAction.fadeOut(0.10);
@@ -170,6 +180,7 @@ function updatePlayerController(dt) {
 
             // Frame 40 (1.6667s) Touchdown sync: play recovery crouch (frames 40-48) on surface
             if (jumpAction) {
+                jumpAction.setEffectiveTimeScale(1.0); // Reset to normal rate for touchdown recovery
                 jumpAction.time = 1.6667; // Force exact touchdown frame (Frame 40)
                 jumpAction.fadeOut(0.30); // Play impact recovery crouch (frames 40-48) on ground
             }
@@ -245,5 +256,10 @@ function updatePlayerController(dt) {
     if (walkAction && isWalking && isGrounded) {
         const timeScale = THREE.MathUtils.clamp(actualSpeed / PLAYER_SPEED, 0.4, 1.25);
         walkAction.setEffectiveTimeScale(timeScale);
+    }
+
+    /* ── 8. Procedural Secondary Ponytail Physics (Additive Lag / Trailing Motion) ── */
+    if (typeof updatePonytailPhysics === 'function') {
+        updatePonytailPhysics(dt);
     }
 }

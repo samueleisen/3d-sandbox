@@ -1,8 +1,8 @@
 /* ───────────────────────────────────────────────
     CONSTANTS
 ─────────────────────────────────────────────── */
-const WORLD_WIDTH = 3000;
-const WORLD_DEPTH = 3000;
+const WORLD_WIDTH = 10000;
+const WORLD_DEPTH = 10000;
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
 const PLAYER_SPEED = 120;          // units/sec max speed
@@ -35,10 +35,11 @@ let camViewSize = 420;
 ─────────────────────────────────────────────── */
 const PAL = {
     bg: 0x1a1a2e,
-    floorA: 0x202038,
+    floorA: 0x5c4718, // Dark Yellow Ground
+    grass: 0xf0c830,  // Golden Yellow Grass
     floorB: 0x282848,
     gridLine: 0x3a3a5c,
-    wallBorder: 0x4a3a6a,
+    wallBorder: 0x8c6b23,
     playerTop: 0x5cf0a0,
     playerSide: 0x38c878,
     playerEdge: 0x2aff90,

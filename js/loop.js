@@ -12,11 +12,7 @@ const coordsEl = document.getElementById('coords');
 let camTargetX = 0, camTargetZ = 0;
 const CAM_LERP = 8; // higher = snappier
 
-// Reusable frustum calculation objects (prevents GC allocation per frame)
-const cameraFrustum = new THREE.Frustum();
-const projScreenMatrix = new THREE.Matrix4();
-const cullingSphere = new THREE.Sphere();
-let totalCulledObjects = 0;
+
 
 function animate() {
     requestAnimationFrame(animate);
@@ -56,46 +52,23 @@ function animate() {
     camera.position.z = pz + camOffsetZ;
     camera.lookAt(px, py + 12, pz);
 
-    /* ── Compute Camera View Frustum for Object Culling ── */
-    camera.updateMatrixWorld();
-    projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    cameraFrustum.setFromProjectionMatrix(projScreenMatrix);
-
-    let activeObjectsCount = 0;
-    let totalTrackedObjects = 0;
-
-    // Wide inner distance threshold (35% of maxVisDist) for a very slow, gentle shrink transition
-    const innerDist = maxVisDist * 0.35;
-    const innerDistSq = innerDist * innerDist;
-
-    // Helper for smoothstep easing fade (keeps scale high for longer, easing down gradually)
-    function calcSmoothFade(distSq) {
-        if (distSq <= innerDistSq) return 1.0;
-        if (distSq >= maxVisDistSq) return 0.0;
-        const dist = Math.sqrt(distSq);
-        const t = (dist - innerDist) / (maxVisDist - innerDist);
-        return 1.0 - (t * t * (3 - 2 * t));
-    }
-
-
-
     /* ── View-Frustum Aligned & Texel-Snapped Shadow Tracking ── */
     // Camera forward unit vector on horizontal ground plane
     const fwdX = -Math.sin(yawRad);
     const fwdZ = -Math.cos(yawRad);
 
     // Shift shadow box center forward (in front of player/camera)
-    const SHADOW_FORWARD_OFFSET = 200; // Increase to shift box further forward/North ! important manual changes
+    const SHADOW_FORWARD_OFFSET = 200; // Shift shadow box forward
     const shadowTargetX = px + fwdX * SHADOW_FORWARD_OFFSET;
-    const shadowTargetY = 0; // Anchored to ground level so jumps do not lift/bounce the shadow camera
+    const shadowTargetY = 0; // Anchored to ground level
     const shadowTargetZ = pz + fwdZ * SHADOW_FORWARD_OFFSET;
 
     // Calculate light source offset
     let shadowCamX = shadowTargetX + 200;
-    let shadowCamY = shadowTargetY + 450; // Fixed light height relative to ground
+    let shadowCamY = shadowTargetY + 450;
     let shadowCamZ = shadowTargetZ + 200;
 
-    // Snap position to shadow map texel grid to stop shadow edge flickering/swimming during movement
+    // Snap position to shadow map texel grid to stop shadow edge flickering during movement
     const shadowWidth = dirLight.shadow.camera.right - dirLight.shadow.camera.left;
     const texelSize = shadowWidth / dirLight.shadow.mapSize.width;
     shadowCamX = Math.floor(shadowCamX / texelSize) * texelSize;
@@ -104,10 +77,9 @@ function animate() {
     dirLight.position.set(shadowCamX, shadowCamY, shadowCamZ);
     dirLight.target.position.set(shadowTargetX, shadowTargetY, shadowTargetZ);
     dirLight.target.updateMatrixWorld();
-    if (typeof shadowHelper !== 'undefined') shadowHelper.update();
 
     /* ── HUD ── */
-    coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)} | Active: ${activeObjectsCount}/${totalTrackedObjects}`;
+    coordsEl.textContent = `x: ${Math.round(px)}  z: ${Math.round(pz)}`;
 
     renderer.render(scene, camera);
 

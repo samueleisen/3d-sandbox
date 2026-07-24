@@ -80,7 +80,22 @@ _loader.load(
 
         playerGroup.add(model);
 
-        // 3. AnimationMixer — register every clip by lowercased name
+        // 4. Collect ponytail bones (Ponytail1, ponytail2, ponytail3, ponytail4, ponytail5)
+        const ponytailNames = ['ponytail1', 'ponytail2', 'ponytail3', 'ponytail4', 'ponytail5'];
+        window.ponytailBones = new Array(5).fill(null);
+        model.traverse(function (node) {
+            if (node.name) {
+                const idx = ponytailNames.indexOf(node.name.toLowerCase());
+                if (idx !== -1) {
+                    node._restQuaternion = node.quaternion.clone();
+                    window.ponytailBones[idx] = node;
+                }
+            }
+        });
+        const foundCount = window.ponytailBones.filter(Boolean).length;
+        console.log(`[player] Found ${foundCount}/5 ponytail bones for procedural physics.`);
+
+        // 5. AnimationMixer — register every clip by lowercased name
         mixer = new THREE.AnimationMixer(model);
 
         if (gltf.animations && gltf.animations.length > 0) {

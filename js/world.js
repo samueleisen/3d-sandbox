@@ -41,6 +41,50 @@ createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0, HALF_DEPTH + wallThi
 createBorderWall(wallThick, WORLD_DEPTH, -HALF_WIDTH - wallThick / 2, 0);                  // West
 createBorderWall(wallThick, WORLD_DEPTH, HALF_WIDTH + wallThick / 2, 0);                  // East
 
-/* ── Obstacles  (empty list preserved for collision helper) ── */
+/* ── Obstacles ── */
 const obstacles = []; // { mesh, box } — consumed by collision.js
+
+/* ── Low-Poly Tall Monument Landmark at X = 0 Z = -3000 ── */
+function createTallMonolith(x, z) {
+    const group = new THREE.Group();
+
+    // 1. Base Pedestal (Low-poly hexagonal base)
+    const baseGeo = new THREE.CylinderGeometry(90, 120, 50, 6);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness: 0.85, flatShading: true });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = 25;
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    group.add(baseMesh);
+
+    // 2. Main Shaft (Tall Low-Poly Hexagonal Column, Height = 480)
+    const shaftGeo = new THREE.CylinderGeometry(35, 75, 480, 6);
+    const shaftMat = new THREE.MeshStandardMaterial({ color: 0x6c5b7b, roughness: 0.7, flatShading: true });
+    const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+    shaftMesh.position.y = 50 + 240;
+    shaftMesh.castShadow = true;
+    shaftMesh.receiveShadow = true;
+    group.add(shaftMesh);
+
+    // 3. Spire Tip (Glowing Low-Poly Pyramid Cap, Height = 100)
+    const tipGeo = new THREE.ConeGeometry(35, 100, 6);
+    const tipMat = new THREE.MeshStandardMaterial({ color: 0xf0c830, roughness: 0.3, metalness: 0.2, flatShading: true });
+    const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+    tipMesh.position.y = 50 + 480 + 50;
+    tipMesh.castShadow = true;
+    tipMesh.receiveShadow = true;
+    group.add(tipMesh);
+
+    group.scale.set(3.0, 3.0, 3.0);
+    group.position.set(x, 0, z);
+    scene.add(group);
+
+    // Register collision box
+    group.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(baseMesh);
+    obstacles.push({ mesh: baseMesh, box });
+}
+
+// Spawn Big Tall Monument at X = 0, Z = -3000
+createTallMonolith(0, -3000);
 

@@ -6,7 +6,7 @@
 
 let grassInstancedMesh = null;
 let grassData = [];
-let maxGrassCount = 200000;
+let maxGrassCount = 80000;
 
 // Rolling Grid parameters (11x11 chunk grid = 4400x4400 total active span extending around camera)
 const CHUNK_SIZE = 400;    // units per chunk square
@@ -154,7 +154,7 @@ function createGrassLandscape(count = 5000) {
     const geo = createGrassBladeGeometry();
 
     const mat = new THREE.MeshStandardMaterial({
-        color: PAL.treeLeavesTop || 0x4cb050,
+        color: PAL.grass || 0xf0c830,
         roughness: 0.7,
         metalness: 0.1,
         side: THREE.DoubleSide,
@@ -198,7 +198,7 @@ function createGrassLandscape(count = 5000) {
             float distToPlayer = length(instWorldPos.xz - uPlayerPos.xz);
 
             // 1. Smooth Distance Scale Dissolve from Camera Position (Horizon Fade)
-            float innerDist = uMaxVisDist * 0.30;
+            float innerDist = uMaxVisDist * 0.57;
             float fadeAlpha = 1.0;
             if (distToCam > innerDist) {
                 float t = clamp((distToCam - innerDist) / (uMaxVisDist - innerDist), 0.0, 1.0);
@@ -221,9 +221,11 @@ function createGrassLandscape(count = 5000) {
             // Height-based influence factor (0 at root y=0, 1 at top tip y=10)
             float heightFactor = clamp(position.y / 10.0, 0.0, 1.0);
 
-            // 3. GPU Ambient Wind Sway
-            float windSway = sin(uTime * 2.8 + instWorldPos.x * 0.08 + instWorldPos.z * 0.08) * 0.45 * heightFactor;
-            transformed.x += windSway;
+            // 3. GPU Ambient Wind Sway (Bypassed beyond 1600 units for GPU performance)
+            if (distToCam < 600.0) {
+                float windSway = sin(uTime * 2.8 + instWorldPos.x * 0.08 + instWorldPos.z * 0.08) * 0.45 * heightFactor;
+                transformed.x += windSway;
+            }
 
             // 4. GPU Player Collision Bending Force (from player feet)
             if (distToPlayer < uBendRadius && abs(instWorldPos.y - uPlayerPos.y) < 25.0) {
@@ -241,9 +243,23 @@ function createGrassLandscape(count = 5000) {
     grassInstancedMesh.castShadow = true;
     grassInstancedMesh.receiveShadow = true;
 
-    // Custom depth material so shadows reflect GPU vertex bending & wind
+    // Custom depth material for shadow pass (culls shadow map rendering beyond 1000 units)
     const customDepthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-    customDepthMat.onBeforeCompile = mat.onBeforeCompile;
+    customDepthMat.onBeforeCompile = function (shader) {
+        mat.onBeforeCompile(shader);
+
+        // Inject Shadow Distance Culling (1000 units) into depth pass
+        shader.vertexShader = shader.vertexShader.replace(
+            'transformed *= fadeAlpha;',
+            `
+            // Shadow Distance Culling: collapse shadow depth geometry beyond 1000 units
+            if (distToCam > 500.0) {
+                fadeAlpha = 0.0;
+            }
+            transformed *= fadeAlpha;
+            `
+        );
+    };
     grassInstancedMesh.customDepthMaterial = customDepthMat;
 
     grassData = new Array(count);
