@@ -1,18 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>GLB Analyzer — HeroMC-Animation</title>
   <style>
-    body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 24px; }
-    h2   { color: #58a6ff; }
-    h3   { color: #79c0ff; margin-top: 20px; }
-    pre  { background: #161b22; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
-    .ok  { color: #3fb950; }
-    .err { color: #f85149; }
-    .dim { color: #6e7681; }
+    body {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: monospace;
+      padding: 24px;
+    }
+
+    h2 {
+      color: #58a6ff;
+    }
+
+    h3 {
+      color: #79c0ff;
+      margin-top: 20px;
+    }
+
+    pre {
+      background: #161b22;
+      padding: 12px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
+
+    .ok {
+      color: #3fb950;
+    }
+
+    .err {
+      color: #f85149;
+    }
+
+    .dim {
+      color: #6e7681;
+    }
   </style>
 </head>
+
 <body>
   <h2>GLB Analyzer — HeroMC-Animation.glb</h2>
   <pre id="out">Loading…</pre>
@@ -25,7 +54,7 @@
 
     const loader = new THREE.GLTFLoader();
     loader.load(
-      'HeroMC-Animation.glb',
+      'HeroMC-Animation-color.glb',
 
       function (gltf) {
         log('✅ Loaded OK\n');
@@ -45,7 +74,7 @@
 
         // ── Hierarchy: bones + meshes ───────────────────────────
         log('\n━━━ SCENE NODES ━━━');
-        const bones  = [];
+        const bones = [];
         const meshes = [];
 
         gltf.scene.traverse(function (node) {
@@ -62,7 +91,7 @@
         });
 
         // ── Bounding box ────────────────────────────────────────
-        const box  = new THREE.Box3().setFromObject(gltf.scene);
+        const box = new THREE.Box3().setFromObject(gltf.scene);
         const size = new THREE.Vector3();
         box.getSize(size);
         log('\n━━━ BOUNDING BOX ━━━');
@@ -76,9 +105,10 @@
 
       function (err) {
         out.textContent = '❌ Error: ' + err;
-        out.className   = 'err';
+        out.className = 'err';
       }
     );
   </script>
 </body>
+
 </html>

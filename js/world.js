@@ -18,28 +18,7 @@ floor.position.y = 0;
 floor.receiveShadow = true;
 scene.add(floor);
 
-/* ── Border Walls  (visual + collision) ─────── */
-function createBorderWall(width, depth, x, z) {
-    const geo = new THREE.BoxGeometry(width, EDGE_WALL_H, depth);
-    const mat = new THREE.MeshStandardMaterial({
-        color: PAL.wallBorder,
-        roughness: 0.7,
-        metalness: 0.2,
-        transparent: true,
-        opacity: 0.6
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, EDGE_WALL_H / 2, z);
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    scene.add(mesh);
-}
-
-const wallThick = 4;
-createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0, -HALF_DEPTH - wallThick / 2); // North
-createBorderWall(WORLD_WIDTH + wallThick * 2, wallThick, 0, HALF_DEPTH + wallThick / 2); // South
-createBorderWall(wallThick, WORLD_DEPTH, -HALF_WIDTH - wallThick / 2, 0);                  // West
-createBorderWall(wallThick, WORLD_DEPTH, HALF_WIDTH + wallThick / 2, 0);                  // East
+/* ── Border Walls removed for infinite procedural world ── */
 
 /* ── Obstacles ── */
 const obstacles = []; // { mesh, box } — consumed by collision.js
@@ -79,10 +58,14 @@ function createTallMonolith(x, z) {
     group.position.set(x, 0, z);
     scene.add(group);
 
-    // Register collision box
+    // Register collision box & horizon sink tracking
     group.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(baseMesh);
     obstacles.push({ mesh: baseMesh, box });
+
+    if (typeof registerHorizonObject === 'function') {
+        registerHorizonObject(group);
+    }
 }
 
 // Spawn Big Tall Monument at X = 0, Z = -3000

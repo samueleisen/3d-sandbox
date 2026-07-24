@@ -47,7 +47,7 @@ const animations = {};
 let glbReady = false;
 
 // ── GLB filename ───────────────────────────────────────────────
-const PLAYER_GLB = 'HeroMC-Animation.glb';
+const PLAYER_GLB = 'HeroMC-Animation-color.glb';
 
 // ─────────────────────────────────────────────────────────────
 //  Load

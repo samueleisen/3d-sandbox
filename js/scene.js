@@ -23,12 +23,12 @@ dirLight.castShadow = true;
 // Asymmetric rectangular shadow camera bounds (expanded top and right)
 dirLight.shadow.mapSize.width = 1024;
 dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.left = -500;
-dirLight.shadow.camera.right = 700; // Expanded right side ! human notice
-dirLight.shadow.camera.top = 700;   // Expanded top side
-dirLight.shadow.camera.bottom = -430;
-dirLight.shadow.camera.near = 250;
-dirLight.shadow.camera.far = 1000;
+dirLight.shadow.camera.left = -1000;
+dirLight.shadow.camera.right = 1400;
+dirLight.shadow.camera.top = 1400;
+dirLight.shadow.camera.bottom = -1000;
+dirLight.shadow.camera.near = 50;
+dirLight.shadow.camera.far = 2800;
 dirLight.shadow.bias = -0.0003;
 dirLight.shadow.camera.updateProjectionMatrix();
 scene.add(dirLight);
@@ -43,12 +43,12 @@ let camera;
 
 function initCamera() {
     if (cameraType === 'persp') {
-        camera = new THREE.PerspectiveCamera(camFov, aspect, 10, 8000);
+        camera = new THREE.PerspectiveCamera(camFov, aspect, 10, 16000);
     } else {
         camera = new THREE.OrthographicCamera(
             -camViewSize * aspect, camViewSize * aspect,
             camViewSize, -camViewSize,
-            10, 8000
+            10, 16000
         );
     }
 }

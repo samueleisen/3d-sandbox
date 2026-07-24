@@ -27,6 +27,17 @@ function animate() {
     const py = playerGroup.position.y;
     const pz = playerGroup.position.z;
 
+    // Track floor mesh beneath player for infinite ground coverage
+    if (typeof floor !== 'undefined') {
+        floor.position.x = px;
+        floor.position.z = pz;
+    }
+
+    /* ── Faraway Object Horizon Sink & Scale Displacement ── */
+    if (typeof updateHorizonDisplacement === 'function') {
+        updateHorizonDisplacement(px, pz);
+    }
+
     /* ── Interactive Grass Collision Bending & Wind Sway ── */
     if (typeof updateGrassPhysics === 'function') {
         updateGrassPhysics(px, py, pz, dt, time);
@@ -58,7 +69,7 @@ function animate() {
     const fwdZ = -Math.cos(yawRad);
 
     // Shift shadow box center forward (in front of player/camera)
-    const SHADOW_FORWARD_OFFSET = 200; // Shift shadow box forward
+    const SHADOW_FORWARD_OFFSET = 500; // Shift shadow box forward for extended far grass shadows
     const shadowTargetX = px + fwdX * SHADOW_FORWARD_OFFSET;
     const shadowTargetY = 0; // Anchored to ground level
     const shadowTargetZ = pz + fwdZ * SHADOW_FORWARD_OFFSET;

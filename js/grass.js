@@ -45,20 +45,64 @@ function hash2D(cx, cz, index, seed = 0) {
 function createGrassBladeGeometry() {
     const w = 2.2;
     const h = 10.0;
+    const taper = 0.25; // 75% narrower at top tip (1.0 - 0.75 = 0.25)
 
-    // Plane geometry with 3 height segments for natural curvature
-    const geo = new THREE.PlaneGeometry(w, h, 1, 3);
+    const halfW = w / 2;
+    const topHalfW = halfW * taper;
 
-    // Anchor pivot at bottom (y = 0)
-    geo.translate(0, h / 2, 0);
+    // Offset for the 2nd ("fake") grass cluster placed slightly further
+    const ox = 1.8;
+    const oz = 1.8;
 
-    // Taper width toward top vertex tip
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-        const yRatio = pos.getY(i) / h;
-        const taper = 1.0 - yRatio * 0.75; // 75% narrower at top tip
-        pos.setX(i, pos.getX(i) * taper);
-    }
+    // 2 Sets of 2 Crossing Quads (0° and 90°): 8 triangles, 16 vertices per instance
+    const positions = new Float32Array([
+        // --- Cluster 1 (Original at 0, 0, 0) ---
+        // Quad 1A: along X-axis (0°)
+        -halfW, 0, 0,
+        halfW, 0, 0,
+        -topHalfW, h, 0,
+        topHalfW, h, 0,
+
+        // Quad 1B: along Z-axis (90°)
+        0, 0, -halfW,
+        0, 0, halfW,
+        0, h, -topHalfW,
+        0, h, topHalfW,
+
+        // --- Cluster 2 (Second grass tuft offset slightly further at ox, oz) ---
+        // Quad 2A: along X-axis (0°)
+        ox - halfW, 0, oz,
+        ox + halfW, 0, oz,
+        ox - topHalfW, h, oz,
+        ox + topHalfW, h, oz,
+
+        // Quad 2B: along Z-axis (90°)
+        ox, 0, oz - halfW,
+        ox, 0, oz + halfW,
+        ox, h, oz - topHalfW,
+        ox, h, oz + topHalfW
+    ]);
+
+    const indices = [
+        // Cluster 1 (0, 0, 0)
+        0, 1, 2, 2, 1, 3,    // Quad 1A
+        4, 5, 6, 6, 5, 7,    // Quad 1B
+
+        // Cluster 2 (ox, 0, oz)
+        8, 9, 10, 10, 9, 11,  // Quad 2A
+        12, 13, 14, 14, 13, 15  // Quad 2B
+    ];
+
+    // Attribute to identify Cluster 1 (0.0) vs Cluster 2 (1.0) for GPU Geo-Morphing
+    const clusters = new Float32Array([
+        0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1
+    ]);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('aCluster', new THREE.BufferAttribute(clusters, 1));
+    geo.setIndex(indices);
     geo.computeVertexNormals();
 
     return geo;
@@ -70,6 +114,7 @@ function createGrassBladeGeometry() {
 function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
     const originX = cx * CHUNK_SIZE - CHUNK_SIZE / 2;
     const originZ = cz * CHUNK_SIZE - CHUNK_SIZE / 2;
+    const matArray = grassInstancedMesh.instanceMatrix.array;
 
     for (let i = 0; i < bladesPerChunk; i++) {
         const idx = baseIdx + i;
@@ -88,12 +133,30 @@ function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
 
         grassData[idx] = { x: gx, y: gy, z: gz, rotY, baseScale };
 
-        _dummyGrass.position.set(gx, gy, gz);
-        _dummyGrass.rotation.set(0, rotY, 0);
-        _dummyGrass.scale.set(baseScale, baseScale, baseScale);
-        _dummyGrass.updateMatrix();
+        // Direct 4x4 matrix write into Float32Array (bypasses Object3D math & allocations)
+        const c = Math.cos(rotY) * baseScale;
+        const s = Math.sin(rotY) * baseScale;
+        const m = idx * 16;
 
-        grassInstancedMesh.setMatrixAt(idx, _dummyGrass.matrix);
+        matArray[m]      = c;
+        matArray[m + 1]  = 0;
+        matArray[m + 2]  = -s;
+        matArray[m + 3]  = 0;
+
+        matArray[m + 4]  = 0;
+        matArray[m + 5]  = baseScale;
+        matArray[m + 6]  = 0;
+        matArray[m + 7]  = 0;
+
+        matArray[m + 8]  = s;
+        matArray[m + 9]  = 0;
+        matArray[m + 10] = c;
+        matArray[m + 11] = 0;
+
+        matArray[m + 12] = gx;
+        matArray[m + 13] = gy;
+        matArray[m + 14] = gz;
+        matArray[m + 15] = 1;
     }
 }
 
@@ -161,7 +224,7 @@ function createGrassLandscape(count = 5000) {
         shadowSide: THREE.DoubleSide
     });
 
-    // GLSL Shader Injection: 100% GPU-accelerated bending, wind sway, narrow FOV vision angle culling
+    // GLSL Shader Injection: 100% GPU-accelerated bending, wind sway, narrow FOV vision angle culling, and Geo-Morphing LOD
     mat.onBeforeCompile = function (shader) {
         shader.uniforms.uPlayerPos = grassUniforms.uPlayerPos;
         shader.uniforms.uCamPos = grassUniforms.uCamPos;
@@ -172,6 +235,7 @@ function createGrassLandscape(count = 5000) {
         shader.uniforms.uBendRadius = grassUniforms.uBendRadius;
 
         shader.vertexShader = `
+            attribute float aCluster;
             uniform vec3 uPlayerPos;
             uniform vec3 uCamPos;
             uniform vec3 uCamDir;
@@ -196,6 +260,13 @@ function createGrassLandscape(count = 5000) {
             vec2 dirFromCam = instWorldPos.xz - uCamPos.xz;
             float distToCam = length(dirFromCam);
             float distToPlayer = length(instWorldPos.xz - uPlayerPos.xz);
+
+            // GPU Geo-Morphing LOD: Near (<50) full double-tuft (8 tri / 16 vert); Far (>600) single-tuft (4 tri)
+            if (aCluster > 0.5) {
+                float c2Scale = smoothstep(300.0, 50.0, distToCam);
+                vec3 c2Center = vec3(1.8, 0.0, 1.8);
+                transformed = c2Center + (transformed - c2Center) * c2Scale;
+            }
 
             // 1. Smooth Distance Scale Dissolve from Camera Position (Horizon Fade)
             float innerDist = uMaxVisDist * 0.57;
@@ -252,8 +323,8 @@ function createGrassLandscape(count = 5000) {
         shader.vertexShader = shader.vertexShader.replace(
             'transformed *= fadeAlpha;',
             `
-            // Shadow Distance Culling: collapse shadow depth geometry beyond 1000 units
-            if (distToCam > 500.0) {
+            // Shadow Distance Culling: collapse shadow depth geometry beyond 1800 units for far grass shadows
+            if (distToCam > 1400.0) {
                 fadeAlpha = 0.0;
             }
             transformed *= fadeAlpha;

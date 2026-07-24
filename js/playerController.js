@@ -100,7 +100,7 @@ function updatePlayerController(dt) {
     const dz = velZ * dt;
 
     // Try X axis independently (takes 3D elevation py into account so mid-air leaps cleared obstacles)
-    const newX = THREE.MathUtils.clamp(px + dx, -HALF_WIDTH + PLAYER_RADIUS, HALF_WIDTH - PLAYER_RADIUS);
+    const newX = px + dx;
     if (!testCollision(newX, py, pz)) {
         px = newX;
     } else {
@@ -108,7 +108,7 @@ function updatePlayerController(dt) {
     }
 
     // Try Z axis independently (takes 3D elevation py into account so mid-air leaps cleared obstacles)
-    const newZ = THREE.MathUtils.clamp(pz + dz, -HALF_DEPTH + PLAYER_RADIUS, HALF_DEPTH - PLAYER_RADIUS);
+    const newZ = pz + dz;
     if (!testCollision(px, py, newZ)) {
         pz = newZ;
     } else {
