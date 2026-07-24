@@ -95,8 +95,8 @@ function animate() {
     const shadowTargetZ = Math.floor(pz / texelSize) * texelSize;
     const shadowTargetY = 0; // Anchored to ground level
 
-    // Keep light position rigidly locked at high altitude offset (1000, 2500, 1000) for uniform parallel sunlight across all tall structures
-    dirLight.position.set(shadowTargetX + 1000, 2500, shadowTargetZ + 1000);
+    // Keep light position rigidly locked along Z-axis front offset (0, 2500, -5000)
+    dirLight.position.set(shadowTargetX, 2500, shadowTargetZ - 5000);
     dirLight.target.position.set(shadowTargetX, shadowTargetY, shadowTargetZ);
     dirLight.target.updateMatrixWorld();
 

@@ -17,7 +17,7 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-dirLight.position.set(1000, 2500, 1000);
+dirLight.position.set(0, 2500, -5000);
 dirLight.castShadow = true;
 
 // Wide symmetric shadow camera bounds (4000x4000 units centered around player)
@@ -28,7 +28,7 @@ dirLight.shadow.camera.right = 2000;
 dirLight.shadow.camera.top = 2000;
 dirLight.shadow.camera.bottom = -2000;
 dirLight.shadow.camera.near = 100;
-dirLight.shadow.camera.far = 4500;
+dirLight.shadow.camera.far = 9000;
 dirLight.shadow.bias = -0.0002;
 dirLight.shadow.camera.updateProjectionMatrix();
 scene.add(dirLight);
