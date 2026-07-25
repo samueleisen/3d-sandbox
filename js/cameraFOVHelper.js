@@ -5,7 +5,7 @@
 ─────────────────────────────────────────────── */
 
 let fovHelperLines = null;
-let fovHelperEnabled = true;
+let fovHelperEnabled = false;
 
 /**
  * Creates visual 3D FOV boundary lines in the scene.

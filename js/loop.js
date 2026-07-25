@@ -72,8 +72,9 @@ function animate() {
 
     /* ── Camera 3D Orbit Tracking ── */
 
-    // Lock camera orbital position at 85° so camera height doesn't drop further at ground level
-    const orbitAngleDeg = Math.min(camAngleDeg, 85);
+    // Lock camera orbital position at 85° to restrain camera Y height from lowering further
+    const MAX_POSITION_TILT = 80;
+    const orbitAngleDeg = Math.min(camAngleDeg, MAX_POSITION_TILT);
     const pitchRad = THREE.MathUtils.degToRad(orbitAngleDeg);
     const yawRad = THREE.MathUtils.degToRad(camYawDeg || 0);
 
@@ -86,13 +87,18 @@ function animate() {
     camera.position.y = py + camOffsetY;
     camera.position.z = pz + camOffsetZ;
 
-    // Pitch lookAt target upwards into the sky when tilt exceeds 85°
+    // Pitch lookAt target upwards into the sky when tilt exceeds 75°
     let targetY = py + 12;
-    if (camAngleDeg > 85) {
-        const extraTiltRad = THREE.MathUtils.degToRad(camAngleDeg - 85);
+    if (camAngleDeg > MAX_POSITION_TILT) {
+        const extraTiltRad = THREE.MathUtils.degToRad(camAngleDeg - MAX_POSITION_TILT);
         targetY += camHeight * Math.tan(extraTiltRad);
     }
     camera.lookAt(px, targetY, pz);
+
+    /* ── Stylized Sky Dome Position Tracking ── */
+    if (typeof updateSky === 'function') {
+        updateSky();
+    }
 
     /* ── World-Locked Player-Centered Wide Shadow Tracking (0% Camera Yaw Rotation Impact) ── */
     // Calculate texel size of the 4000x4000 shadow camera frustum

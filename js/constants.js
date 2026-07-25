@@ -5,11 +5,11 @@ const WORLD_WIDTH = 10000;
 const WORLD_DEPTH = 10000;
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
-const PLAYER_SPEED = 150;          // units/sec max speed
+const PLAYER_SPEED = 400;          // units/sec max speed
 const PLAYER_ACCEL = 1200;          // units/sec² acceleration
 const PLAYER_FRICTION = 16;         // deceleration damping factor
-const PLAYER_RADIUS = 12;           // collision half-width
-const PLAYER_HEIGHT = 28;
+const PLAYER_RADIUS = 10;           // collision half-width
+const PLAYER_HEIGHT = 24;
 const EDGE_WALL_H = 20;
 const JUMP_POWER = 100;           // initial vertical jump velocity (units/sec)
 const JUMP_GRAVITY = 180;         // gravity acceleration (units/sec²) — 40 frames / 1.6667s airtime
@@ -32,12 +32,12 @@ let HORIZON_MIN_SCALE = 0.0;         // Minimum scale at max distance
 let cameraType = 'persp';
 let camAngleDeg = 75;
 let camYawDeg = 180;                 // horizontal camera rotation angle (degrees)
-let camHeight = 200;
+let camHeight = 150;
 let camFov = 50;
 let camViewSize = 420;
 
 /* ───────────────────────────────────────────────
-    PALETTE  (pixel-art inspired muted tones)
+    PALETTE
 ─────────────────────────────────────────────── */
 const PAL = {
     bg: 0x1a1a2e,

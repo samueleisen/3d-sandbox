@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="A 3D interactive game with smooth WASD movement, orthographic camera, and real 3D depth built with Three.js.">
-    <title>3D Pixel World</title>
+    <title>3D Farmland</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <div id="ui-overlay">
+    <div id="ui-overlay" style="display: none;">
         <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
             Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
         <div style="margin-top: 2px;">Move or Drag Mouse to Orbit Camera</div>
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <div id="camera-panel">
+    <div id="camera-panel" style="display: none;">
         <h3>Camera Controls</h3>
 
         <div class="control-group">
@@ -55,8 +55,8 @@
         </div>
 
         <div class="control-group">
-            <label>Camera Height: <span id="val-height" class="control-value">200</span></label>
-            <input type="range" id="ctrl-height" min="150" max="900" value="200">
+            <label>Camera Height: <span id="val-height" class="control-value">150</span></label>
+            <input type="range" id="ctrl-height" min="150" max="900" value="150">
         </div>
 
         <div class="control-group" id="group-fov">
@@ -92,7 +92,7 @@
 
         <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="ctrl-fov-lines" checked style="width: auto; cursor: pointer;">
+                <input type="checkbox" id="ctrl-fov-lines" style="width: auto; cursor: pointer;">
                 Show FOV Vision Boundary Lines
             </label>
         </div>
@@ -106,7 +106,7 @@
 
         <div class="control-group">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="ctrl-light-helper" checked style="width: auto; cursor: pointer;">
+                <input type="checkbox" id="ctrl-light-helper" style="width: auto; cursor: pointer;">
                 Show Light Ray & Discrete Step Helper
             </label>
         </div>
@@ -124,6 +124,7 @@
     <!-- World & Landscape -->
     <script src="js/world.js"></script>
     <script src="js/grass.js"></script>
+    <script src="js/sky.js"></script>
     <script src="js/cameraFOVHelper.js"></script>
     <script src="js/lightHelper.js"></script>
     <script src="js/scenePlacement.js"></script>

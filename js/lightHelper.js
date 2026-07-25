@@ -6,7 +6,7 @@
 let lightHelperGroup = null;
 let centerSunRayLine = null;
 let shadowRadialCircle = null;
-let lightHelperEnabled = true;
+let lightHelperEnabled = false;
 
 /**
  * Creates visual 3D Center Light Ray & Pinkish Radial Vision Circle.
