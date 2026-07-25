@@ -4,10 +4,27 @@
 ─────────────────────────────────────────────── */
 
 /* ── Floor ─────────────────────────────────── */
-// Using a smooth solid color standard material that receives shadow
-const floorGeo = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_DEPTH);
+// Using a smooth 2-color Z-axis gradient standard material that receives shadow
+const floorGeo = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_DEPTH, 1, 64);
+const colorPos = new THREE.Color(PAL.floorPosZ);
+const colorNeg = new THREE.Color(PAL.floorNegZ);
+const posAttr = floorGeo.attributes.position;
+const floorColors = new Float32Array(posAttr.count * 3);
+const _tempColor = new THREE.Color();
+
+for (let i = 0; i < posAttr.count; i++) {
+    // Local plane Y maps to world Z when rotated by -PI/2 (local -Y is world +Z, local +Y is world -Z)
+    const ly = posAttr.getY(i);
+    const t = Math.max(0, Math.min(1, 0.5 - ly / WORLD_DEPTH)); // t = 0.0 at neg Z -> 1.0 at pos Z
+    _tempColor.copy(colorNeg).lerp(colorPos, t);
+    floorColors[i * 3]     = _tempColor.r;
+    floorColors[i * 3 + 1] = _tempColor.g;
+    floorColors[i * 3 + 2] = _tempColor.b;
+}
+floorGeo.setAttribute('color', new THREE.BufferAttribute(floorColors, 3));
+
 const floorMat = new THREE.MeshStandardMaterial({
-    color: PAL.floorA,
+    vertexColors: true,
     roughness: 0.8,
     metalness: 0.1,
     side: THREE.DoubleSide

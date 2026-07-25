@@ -5,11 +5,11 @@ const WORLD_WIDTH = 10000;
 const WORLD_DEPTH = 10000;
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
-const PLAYER_SPEED = 420;          // units/sec max speed
+const PLAYER_SPEED = 150;          // units/sec max speed
 const PLAYER_ACCEL = 1200;          // units/sec² acceleration
 const PLAYER_FRICTION = 16;         // deceleration damping factor
-const PLAYER_RADIUS = 6;           // collision half-width
-const PLAYER_HEIGHT = 14;
+const PLAYER_RADIUS = 12;           // collision half-width
+const PLAYER_HEIGHT = 28;
 const EDGE_WALL_H = 20;
 const JUMP_POWER = 100;           // initial vertical jump velocity (units/sec)
 const JUMP_GRAVITY = 180;         // gravity acceleration (units/sec²) — 40 frames / 1.6667s airtime
@@ -24,15 +24,15 @@ let renderScale = 1.0;                // render resolution multiplier (1.0, 0.75
 
 // Horizon Curvature & Distance Sink Parameters (Easy to adjust)
 let HORIZON_SINK_START = 3500;        // Distance units where objects start shrinking & sinking
-let HORIZON_SINK_END   = 16000;       // Extended distance range for much slower/gradual transition
-let HORIZON_MAX_SINK   = 200;         // Gentle downward displacement below ground
-let HORIZON_MIN_SCALE  = 0.0;         // Minimum scale at max distance
+let HORIZON_SINK_END = 16000;       // Extended distance range for much slower/gradual transition
+let HORIZON_MAX_SINK = 200;         // Gentle downward displacement below ground
+let HORIZON_MIN_SCALE = 0.0;         // Minimum scale at max distance
 
 // Mutable Camera State
 let cameraType = 'persp';
-let camAngleDeg = 45;
-let camYawDeg = 0;                  // horizontal camera rotation angle (degrees)
-let camHeight = 450;
+let camAngleDeg = 75;
+let camYawDeg = 180;                 // horizontal camera rotation angle (degrees)
+let camHeight = 200;
 let camFov = 50;
 let camViewSize = 420;
 
@@ -41,9 +41,11 @@ let camViewSize = 420;
 ─────────────────────────────────────────────── */
 const PAL = {
     bg: 0x1a1a2e,
-    floorA: 0x5c4718, // Dark Yellow Ground
+    floorPosZ: 0xfff04f, // Positive Z Ground Color (Bright Golden Yellow)
+    floorNegZ: 0x665105, // Negative Z Ground Color (Dark Yellow-Brown)
+    floorA: 0xfffd3f,    // Positive Z Ground Color
+    floorB: 0x826c1a,    // Negative Z Ground Color
     grass: 0xf0c830,  // Golden Yellow Grass
-    floorB: 0x282848,
     gridLine: 0x3a3a5c,
     wallBorder: 0x8c6b23,
     playerTop: 0x5cf0a0,

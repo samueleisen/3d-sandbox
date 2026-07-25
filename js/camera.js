@@ -254,8 +254,8 @@ window.addEventListener('mousemove', (e) => {
     camYawDeg = (camYawDeg - deltaX * 0.35) % 360;
     if (camYawDeg < 0) camYawDeg += 360;
 
-    // Vertical Tilt Pitch (clamped between 10° and 85°) — reversed axis
-    camAngleDeg = THREE.MathUtils.clamp(camAngleDeg - deltaY * 0.25, 10, 85);
+    // Vertical Tilt Pitch (clamped between 5° and 135°) — reversed axis
+    camAngleDeg = THREE.MathUtils.clamp(camAngleDeg - deltaY * 0.25, 5, 135);
 
     updateUISliders();
 });
