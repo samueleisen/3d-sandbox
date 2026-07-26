@@ -5,7 +5,6 @@
 ─────────────────────────────────────────────── */
 
 let grassInstancedMesh = null;
-let grassData = [];
 let maxGrassCount = 80000;
 
 // Rolling Grid parameters (11x11 chunk grid = 4400x4400 total active span extending around camera)
@@ -15,9 +14,6 @@ const GRID_DIM = GRID_RADIUS * 2 + 1; // 11
 const TOTAL_CHUNKS = GRID_DIM * GRID_DIM; // 121
 let activeGridX = null;
 let activeGridZ = null;
-
-// Reusable Three.js math objects to avoid per-frame allocations
-const _dummyGrass = new THREE.Object3D();
 
 // Shared uniforms for GPU GLSL shader deformation
 const grassUniforms = {
@@ -109,7 +105,7 @@ function createGrassBladeGeometry() {
 }
 
 /**
- * Seeds a single chunk cell (cx, cz) into grassData starting at instance offset baseIdx.
+ * Seeds a single chunk cell (cx, cz) starting at instance offset baseIdx.
  */
 function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
     const originX = cx * CHUNK_SIZE - CHUNK_SIZE / 2;
@@ -131,25 +127,23 @@ function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
         const rotY = hash2D(cx, cz, i, 3) * Math.PI * 2;
         const baseScale = 0.85 + hash2D(cx, cz, i, 4) * 1.55;
 
-        grassData[idx] = { x: gx, y: gy, z: gz, rotY, baseScale };
-
         // Direct 4x4 matrix write into Float32Array (bypasses Object3D math & allocations)
         const c = Math.cos(rotY) * baseScale;
         const s = Math.sin(rotY) * baseScale;
         const m = idx * 16;
 
-        matArray[m]      = c;
-        matArray[m + 1]  = 0;
-        matArray[m + 2]  = -s;
-        matArray[m + 3]  = 0;
+        matArray[m] = c;
+        matArray[m + 1] = 0;
+        matArray[m + 2] = -s;
+        matArray[m + 3] = 0;
 
-        matArray[m + 4]  = 0;
-        matArray[m + 5]  = baseScale;
-        matArray[m + 6]  = 0;
-        matArray[m + 7]  = 0;
+        matArray[m + 4] = 0;
+        matArray[m + 5] = baseScale;
+        matArray[m + 6] = 0;
+        matArray[m + 7] = 0;
 
-        matArray[m + 8]  = s;
-        matArray[m + 9]  = 0;
+        matArray[m + 8] = s;
+        matArray[m + 9] = 0;
         matArray[m + 10] = c;
         matArray[m + 11] = 0;
 
@@ -206,7 +200,6 @@ function createGrassLandscape(count = 5000) {
     }
 
     if (count <= 0) {
-        grassData = [];
         return;
     }
 
@@ -331,8 +324,6 @@ function createGrassLandscape(count = 5000) {
         applyGrassShader(shader, true);
     };
     grassInstancedMesh.customDepthMaterial = customDepthMat;
-
-    grassData = new Array(count);
 
     // Initial grid seed centered at (0, 0)
     updateRollingGrid(0, 0, 0, -1);

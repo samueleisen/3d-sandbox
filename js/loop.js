@@ -1,16 +1,11 @@
 /* ───────────────────────────────────────────────
     ANIMATION LOOP
     animate() — movement · facing · skeletal anim ·
-    leaf rustle · falling leaves · flower sway ·
     camera tracking · HUD
     Depends on: all other modules
 ─────────────────────────────────────────────── */
 const clock = new THREE.Clock();
 const coordsEl = document.getElementById('coords');
-
-// Smooth camera tracking
-let camTargetX = 0, camTargetZ = 0;
-const CAM_LERP = 8; // higher = snappier
 
 
 
@@ -121,8 +116,9 @@ function animate() {
         for (let i = 0; i < obstacles.length; i++) {
             const obs = obstacles[i];
             if (obs && obs.mesh) {
-                const dx = obs.mesh.position.x - px;
-                const dz = obs.mesh.position.z - pz;
+                const monumentPos = obs.mesh.parent ? obs.mesh.parent.position : obs.mesh.position;
+                const dx = monumentPos.x - px;
+                const dz = monumentPos.z - pz;
                 obs.mesh.castShadow = (dx * dx + dz * dz <= shadowRadiusSq);
             }
         }

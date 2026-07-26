@@ -4,14 +4,17 @@
     Depends on: obstacles[] (world.js), PLAYER_RADIUS, PLAYER_HEIGHT
 ─────────────────────────────────────────────── */
 
+// Reusable static Box3 container to eliminate per-frame allocations
+const _playerBox = new THREE.Box3();
+
 /**
  * Returns 3D AABB bounding box for player taking current (px, py, pz) into account.
+ * Reuses static _playerBox instance to prevent GC memory allocations.
  */
 function getPlayerAABB(px, py = 0, pz = 0) {
-    return new THREE.Box3(
-        new THREE.Vector3(px - PLAYER_RADIUS, py,                 pz - PLAYER_RADIUS),
-        new THREE.Vector3(px + PLAYER_RADIUS, py + PLAYER_HEIGHT,  pz + PLAYER_RADIUS)
-    );
+    _playerBox.min.set(px - PLAYER_RADIUS, py,                 pz - PLAYER_RADIUS);
+    _playerBox.max.set(px + PLAYER_RADIUS, py + PLAYER_HEIGHT,  pz + PLAYER_RADIUS);
+    return _playerBox;
 }
 
 /**
@@ -34,3 +37,4 @@ function testCollision(px, py = 0, pz = 0) {
     }
     return false;
 }
+
