@@ -13,7 +13,7 @@ const horizonTrackedObjects = [];
 function registerHorizonObject(obj, customBaseScale = null, customBaseY = null) {
     if (!obj) return;
 
-    const baseScale = customBaseScale !== null 
+    const baseScale = customBaseScale !== null
         ? (typeof customBaseScale === 'number' ? new THREE.Vector3(customBaseScale, customBaseScale, customBaseScale) : customBaseScale.clone())
         : obj.scale.clone();
 
@@ -28,12 +28,15 @@ function registerHorizonObject(obj, customBaseScale = null, customBaseY = null) 
 
 /**
  * Updates scale and vertical Y displacement for all registered objects relative to (camX, camZ).
+ * Applies jump Counter-Y stabilization based on player air height (playerY).
  * Called every frame in loop.js.
  */
-function updateHorizonDisplacement(camX, camZ) {
+function updateHorizonDisplacement(camX, camZ, playerY = 0) {
     if (horizonTrackedObjects.length === 0) return;
 
     const range = Math.max(1, HORIZON_SINK_END - HORIZON_SINK_START);
+    const groundY = typeof getGroundHeight === 'function' ? getGroundHeight(camX, camZ) : 0;
+    const airHeight = Math.max(0, playerY - groundY);
 
     for (let i = 0; i < horizonTrackedObjects.length; i++) {
         const item = horizonTrackedObjects[i];
@@ -57,9 +60,12 @@ function updateHorizonDisplacement(camX, camZ) {
             const t = Math.min(1.0, (dist - HORIZON_SINK_START) / range);
 
             const currentScaleFactor = THREE.MathUtils.lerp(1.0, HORIZON_MIN_SCALE, t);
-            
-            // Slightly slower downward sink progression (Math.pow(t, 1.3) keeps object higher longer)
-            const sinkY = Math.pow(t, 1.3) * HORIZON_MAX_SINK;
+
+            // Downward sink progression for faraway objects
+            const sinkY = Math.pow(t, 0.9) * HORIZON_MAX_SINK;
+
+            // Stronger Counter-Y offset progression the farther away the object is
+            const jumpCounterY = airHeight * Math.pow(t, 1.2) * 3;
 
             if (currentScaleFactor <= 0.001) {
                 obj.visible = false;
@@ -70,7 +76,7 @@ function updateHorizonDisplacement(camX, camZ) {
                     item.baseScale.y * currentScaleFactor,
                     item.baseScale.z * currentScaleFactor
                 );
-                obj.position.y = item.baseY - sinkY;
+                obj.position.y = item.baseY - sinkY - jumpCounterY;
             }
         }
     }

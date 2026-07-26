@@ -30,13 +30,21 @@ function animate() {
 
     /* ── Faraway Object Horizon Sink & Scale Displacement ── */
     if (typeof updateHorizonDisplacement === 'function') {
-        updateHorizonDisplacement(px, pz);
+        updateHorizonDisplacement(px, pz, py);
     }
 
     /* ── Animated Monuments (Floating Top Crystal & Multi Blue Energy Rings) ── */
     if (typeof animatedMonuments !== 'undefined' && animatedMonuments.length > 0) {
+        const ANIM_CULL_DIST_SQ = 10000 * 10000; // 4000 units distance threshold
         for (let i = 0; i < animatedMonuments.length; i++) {
             const m = animatedMonuments[i];
+            if (!m.group || !m.group.visible) continue;
+
+            // Pause animations early when object is beyond 4000 units distance
+            const dx = m.group.position.x - px;
+            const dz = m.group.position.z - pz;
+            if (dx * dx + dz * dz > ANIM_CULL_DIST_SQ) continue;
+
             if (m.crystal) {
                 m.crystal.rotation.y += 0.8 * dt;
             }

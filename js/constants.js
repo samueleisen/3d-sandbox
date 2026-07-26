@@ -1,8 +1,9 @@
 /* ───────────────────────────────────────────────
     CONSTANTS
 ─────────────────────────────────────────────── */
-const WORLD_WIDTH = 10000;
-const WORLD_DEPTH = 10000;
+const WORLD_WIDTH = 5000;
+const WORLD_DEPTH = 5000;
+const WORLD_RADIUS = WORLD_WIDTH / 2; // 3000 units ground radius
 const HALF_WIDTH = WORLD_WIDTH / 2;
 const HALF_DEPTH = WORLD_DEPTH / 2;
 const PLAYER_SPEED = 400;          // units/sec max speed
@@ -20,7 +21,7 @@ let renderScale = 1.0;                // render resolution multiplier (1.0, 0.75
 // Horizon Curvature & Distance Sink Parameters (Easy to adjust)
 let HORIZON_SINK_START = 3500;        // Distance units where objects start shrinking & sinking
 let HORIZON_SINK_END = 16000;       // Extended distance range for much slower/gradual transition
-let HORIZON_MAX_SINK = 200;         // Gentle downward displacement below ground
+let HORIZON_MAX_SINK = 280;         // Downward displacement below ground
 let HORIZON_MIN_SCALE = 0.0;         // Minimum scale at max distance
 
 // Mutable Camera State
