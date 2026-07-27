@@ -12,37 +12,40 @@
 
 <body>
 
-    <div id="ui-overlay">
-        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
-            Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
-        <div style="margin-top: 2px;">Move or Drag Mouse to Orbit Camera</div>
-        <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
-        <div id="perf-hud"
-            style="margin-top: 8px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 6px; font-size: 11px; pointer-events: auto;">
-            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span
-                    class="perf-avg">--</span></div>
-            <div>Spike (P99): <span class="perf-spike">--</span> &nbsp;|&nbsp; &Delta;: <span
-                    class="perf-diff">--</span></div>
-            <div style="margin-top: 4px; display: flex; gap: 4px;">
-                <button id="btn-set-baseline"
-                    style="background: rgba(200,255,200,0.15); border: 1px solid rgba(200,255,200,0.3); color: #c8ffc8; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Set
-                    Baseline</button>
-                <button id="btn-reset-baseline"
-                    style="background: rgba(200,255,200,0.1); border: 1px solid rgba(200,255,200,0.2); color: #888; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Reset</button>
+    <!-- Wheat Field Loading Screen Overlay -->
+    <div id="loading-overlay">
+        <div class="loading-bg"></div>
+        <div class="loading-white-tint"></div>
+
+        <div class="loading-content">
+            <div class="circle-container">
+                <svg id="loading-svg-ring" width="140" height="140" viewBox="0 0 140 140">
+                    <circle class="ring-bg" cx="70" cy="70" r="54" />
+                    <circle class="ring-fill" cx="70" cy="70" r="54" />
+                </svg>
+
+                <div id="loading-percent">0%</div>
+
+                <button id="btn-start-game" aria-label="Start Game">
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+                        <polygon points="8,5 19,12 8,19" />
+                    </svg>
+                </button>
             </div>
+
+            <div id="loading-label">INITIALIZING ENGINE...</div>
+        </div>
+    </div>
+
+    <div id="ui-overlay" style="padding: 8px 12px; font-size: 11px;">
+        <div id="coords" style="opacity: 0.7;">x: 0 &nbsp;|&nbsp; z: 0</div>
+        <div id="perf-hud" style="margin-top: 4px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 4px;">
+            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span class="perf-avg">--</span></div>
         </div>
     </div>
 
     <div id="camera-panel">
         <h3>Camera Controls</h3>
-
-        <div class="control-group">
-            <label>Camera Projection</label>
-            <select id="ctrl-type">
-                <option value="persp" selected>Perspective (Real Depth)</option>
-                <option value="ortho">Orthographic (Flat 2D)</option>
-            </select>
-        </div>
 
         <div class="control-group">
             <label>Tilt Angle: <span id="val-tilt" class="control-value">75°</span></label>
@@ -54,73 +57,32 @@
             <input type="range" id="ctrl-yaw" min="0" max="360" value="180">
         </div>
 
-        <div class="control-group">
-            <label>Camera Height: <span id="val-height" class="control-value">150</span></label>
-            <input type="range" id="ctrl-height" min="150" max="900" value="150">
-        </div>
-
         <div class="control-group" id="group-fov">
             <label>Field of View: <span id="val-fov" class="control-value">50°</span></label>
             <input type="range" id="ctrl-fov" min="20" max="100" value="50">
         </div>
 
-        <div class="control-group" id="group-size" style="display: none;">
-            <label>Ortho View Size: <span id="val-size" class="control-value">420</span></label>
-            <input type="range" id="ctrl-size" min="150" max="800" value="420">
-        </div>
 
-
-
-        <div class="control-group">
-            <label>Render Quality (Resolution Scale)</label>
-            <select id="ctrl-render-scale">
-                <option value="1.0" selected>100% Native (1.0x)</option>
-                <option value="0.75">75% Balanced (0.75x)</option>
-                <option value="0.50">50% Performance (0.50x)</option>
-            </select>
-        </div>
 
         <div class="control-group">
             <label>Grass Density</label>
             <select id="ctrl-grass-density">
-                <option value="40000" selected>Rock-Solid Horizon (80,000 blades)</option>
-                <option value="25000">Dense Horizon (25,000 blades)</option>
-                <option value="10000">Far Horizon (10,000 blades)</option>
-                <option value="0">Off (Disabled)</option>
+                <option value="40000" selected>Rock-Solid Horizon</option>
+                <option value="25000">Dense Horizon</option>
             </select>
         </div>
 
         <div class="control-group" style="border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 8px;">
-            <label>Ambient Wind SFX: <span id="wind-audio-status" style="color: #ffb050; float: right;">Click to enable</span></label>
+            <label>Ambient Wind SFX: <span id="wind-audio-status" style="color: #ffb050; float: right;">Click to
+                    enable</span></label>
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                <input type="range" id="ctrl-wind-vol" min="0" max="1" step="0.05" value="0.10" style="flex: 1;">
-                <span id="val-wind-vol" class="control-value" style="min-width: 35px; text-align: right;">10%</span>
+                <input type="range" id="ctrl-wind-vol" min="0" max="1" step="0.05" value="0.05" style="flex: 1;">
+                <span id="val-wind-vol" class="control-value" style="min-width: 35px; text-align: right;">5%</span>
             </div>
-            <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; user-select: none;">
+            <label
+                style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; user-select: none;">
                 <input type="checkbox" id="ctrl-wind-mute" style="width: auto; cursor: pointer;">
                 Mute Wind SFX
-            </label>
-        </div>
-
-        <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="ctrl-fov-lines" style="width: auto; cursor: pointer;">
-                Show FOV Vision Boundary Lines
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="ctrl-shadow-helper" style="width: auto; cursor: pointer;">
-                Show Shadow Camera Frustum Debug
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="ctrl-light-helper" style="width: auto; cursor: pointer;">
-                Show Light Ray & Discrete Step Helper
-            </label>
         </div>
     </div>
 
@@ -128,30 +90,16 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <!-- Foundation -->
-    <script src="js/constants.js"></script>
-    <script src="js/perfBuffer.js"></script>
-    <script src="js/audio.js"></script>
     <script src="js/scene.js"></script>
-    <script src="js/horizonSink.js"></script>
 
     <!-- World & Landscape -->
-    <script src="js/world.js"></script>
     <script src="js/grass.js"></script>
-    <script src="js/sky.js"></script>
-    <script src="js/cameraFOVHelper.js"></script>
-    <script src="js/lightHelper.js"></script>
-    <script src="js/scenePlacement.js"></script>
 
     <!-- Character & Systems -->
     <script src="js/player.js"></script>
-    <script src="js/ponytailPhysics.js"></script>
-    <script src="js/input.js"></script>
-    <script src="js/collision.js"></script>
-    <script src="js/playerController.js"></script>
-    <script src="js/camera.js"></script>
 
-    <!-- Game Loop -->
-    <script src="js/loop.js"></script>
+    <!-- Game Loop & Preloader -->
+    <script src="js/preloader.js"></script>
 </body>
 
 </html>

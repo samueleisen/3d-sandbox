@@ -133,3 +133,161 @@ canvas {
     font-weight: bold;
     color: #5cf0a0;
 }
+
+/* ───────────────────────────────────────────────
+   WHEAT FIELD LOADING SCREEN OVERLAY
+─────────────────────────────────────────────── */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+#loading-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Blurred background image layer */
+.loading-bg {
+    position: absolute;
+    inset: -20px;
+    background: url('Wheat-Field-Loading.jpeg') center/cover no-repeat;
+    filter: blur(14px) scale(1.05);
+    -webkit-filter: blur(14px) scale(1.05);
+    z-index: 1;
+}
+
+/* Semi-transparent white tint overlay */
+.loading-white-tint {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 2;
+}
+
+/* Central Content Container */
+.loading-content {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.circle-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* SVG Progress Ring */
+#loading-svg-ring {
+    transform: rotate(-90deg);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+#loading-svg-ring circle.ring-bg {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.08);
+    stroke-width: 8;
+}
+
+#loading-svg-ring circle.ring-fill {
+    fill: none;
+    stroke: #2e7d32;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear;
+}
+
+/* Center Percentage Text */
+#loading-percent {
+    position: absolute;
+    font-size: 22px;
+    font-weight: bold;
+    color: #1b5e20;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    user-select: none;
+}
+
+/* Center Clickable Circular Start Button (hidden during loading) */
+#btn-start-game {
+    position: absolute;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+    border: none;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+#btn-start-game.ready {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+    animation: pulse-ring 2s infinite;
+}
+
+#btn-start-game:hover {
+    transform: scale(1.1);
+    background: linear-gradient(135deg, #66bb6a, #388e3c);
+    box-shadow: 0 8px 25px rgba(46, 125, 50, 0.6);
+}
+
+#btn-start-game:active {
+    transform: scale(0.95);
+}
+
+#btn-start-game svg {
+    margin-left: 3px;
+}
+
+@keyframes pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 16px rgba(76, 175, 80, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+/* Loading status label */
+#loading-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2e7d32;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+    user-select: none;
+}
