@@ -62,10 +62,10 @@ function updateHorizonDisplacement(camX, camZ, playerY = 0) {
             const currentScaleFactor = THREE.MathUtils.lerp(1.0, HORIZON_MIN_SCALE, t);
 
             // Downward sink progression for faraway objects
-            const sinkY = Math.pow(t, 0.9) * HORIZON_MAX_SINK;
+            const sinkY = Math.pow(t, 0.90) * HORIZON_MAX_SINK;
 
             // Stronger Counter-Y offset progression the farther away the object is
-            const jumpCounterY = airHeight * Math.pow(t, 1.2) * 3;
+            const jumpCounterY = airHeight * Math.pow(t, 1.2) * 5;
 
             if (currentScaleFactor <= 0.001) {
                 obj.visible = false;

@@ -19,10 +19,11 @@
 ─────────────────────────────────────────────── */
 
 // Blend & physics constants
-const WALK_FADE_IN       = 0.18;   // seconds
-const WALK_FADE_OUT      = 0.25;   // seconds
-const JUMP_LAUNCH_BLEND  = 0.14;   // seconds smooth transition from idle/walk into jump
-const MIN_WALK_SPEED     = 8.0;    // units/sec threshold for locomotion animation
+const WALK_FADE_IN          = 0.18;   // seconds
+const WALK_FADE_OUT         = 0.25;   // seconds
+const JUMP_LAUNCH_BLEND     = 0.14;   // seconds smooth transition from idle/walk into jump
+const MIN_WALK_SPEED        = 8.0;    // units/sec threshold for locomotion animation
+const WALK_ANIM_SPEED_MULT  = 1.35;   // playback rate multiplier for brisk walk loop animation
 
 // Persistent velocity state
 let velX = 0;
@@ -254,7 +255,7 @@ function updatePlayerController(dt) {
 
     // Dynamic locomotion animation playback rate matching physical movement speed
     if (walkAction && isWalking && isGrounded) {
-        const timeScale = THREE.MathUtils.clamp(actualSpeed / PLAYER_SPEED, 0.4, 1.25);
+        const timeScale = THREE.MathUtils.clamp((actualSpeed / PLAYER_SPEED) * WALK_ANIM_SPEED_MULT, 0.5, 1.7);
         walkAction.setEffectiveTimeScale(timeScale);
     }
 
