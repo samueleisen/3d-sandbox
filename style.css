@@ -331,4 +331,42 @@ canvas {
     text-transform: uppercase;
     text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
     user-select: none;
+}
+
+/* ───────────────────────────────────────────────
+   TRANSLUCENT DYNAMIC MOBILE JOYSTICK
+─────────────────────────────────────────────── */
+#touch-joystick {
+    position: fixed;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(92, 240, 160, 0.15);
+    border: 2px solid rgba(92, 240, 160, 0.4);
+    box-shadow: 0 0 15px rgba(92, 240, 160, 0.25);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+#touch-joystick.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#touch-joystick-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(92, 240, 160, 0.8) 0%, rgba(46, 125, 50, 0.6) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 12px rgba(92, 240, 160, 0.7);
+    transform: translate(-50%, -50%);
 }

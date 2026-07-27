@@ -95,9 +95,131 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
 
-    <script src="js/Sams.js"></script>
+    <!-- Translucent Mobile Joystick Overlay -->
+    <div id="touch-joystick">
+        <div id="touch-joystick-knob"></div>
+    </div>
 
+    <script src="js/Sams.js"></script>
     <script src="js/Owns.js"></script>
+
+    <!-- Translucent Dynamic Mobile Joystick & Camera Touch Drag Script -->
+    <script>
+        (function () {
+            let joyTouchId = null;
+            let camTouchId = null;
+            let startX = 0, startY = 0;
+            let camPrevX = 0, camPrevY = 0;
+            const DEADZONE = 12;
+            const MAX_RADIUS = 40;
+
+            const joystickEl = document.getElementById('touch-joystick');
+            const knobEl = document.getElementById('touch-joystick-knob');
+
+            function updateKeys(dx, dy) {
+                if (typeof keys === 'undefined') return;
+                keys.w = dy < -DEADZONE;
+                keys.s = dy > DEADZONE;
+                keys.a = dx < -DEADZONE;
+                keys.d = dx > DEADZONE;
+            }
+
+            function resetKeys() {
+                if (typeof keys === 'undefined') return;
+                keys.w = keys.a = keys.s = keys.d = false;
+            }
+
+            window.addEventListener('touchstart', function (e) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.target && touch.target.closest && (
+                        touch.target.closest('#camera-panel') ||
+                        touch.target.closest('#ui-overlay') ||
+                        touch.target.closest('#loading-overlay') ||
+                        touch.target.closest('.panel-toggle-btn')
+                    )) {
+                        continue;
+                    }
+
+                    if (touch.clientX < window.innerWidth * 0.5 && joyTouchId === null) {
+                        joyTouchId = touch.identifier;
+                        startX = touch.clientX;
+                        startY = touch.clientY;
+
+                        if (joystickEl) {
+                            joystickEl.style.left = startX + 'px';
+                            joystickEl.style.top = startY + 'px';
+                            joystickEl.classList.add('active');
+                        }
+                        if (knobEl) {
+                            knobEl.style.transform = 'translate(-50%, -50%)';
+                        }
+                    } else if (touch.clientX >= window.innerWidth * 0.5 && camTouchId === null) {
+                        camTouchId = touch.identifier;
+                        camPrevX = touch.clientX;
+                        camPrevY = touch.clientY;
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', function (e) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === joyTouchId) {
+                        const dx = touch.clientX - startX;
+                        const dy = touch.clientY - startY;
+                        updateKeys(dx, dy);
+
+                        if (knobEl) {
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const angle = Math.atan2(dy, dx);
+                            const clampedDist = Math.min(dist, MAX_RADIUS);
+                            const knobX = Math.cos(angle) * clampedDist;
+                            const knobY = Math.sin(angle) * clampedDist;
+                            knobEl.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+                        }
+                    } else if (touch.identifier === camTouchId) {
+                        const dx = touch.clientX - camPrevX;
+                        const dy = touch.clientY - camPrevY;
+                        camPrevX = touch.clientX;
+                        camPrevY = touch.clientY;
+
+                        if (typeof camYawDeg !== 'undefined') {
+                            camYawDeg = (camYawDeg - dx * 0.35) % 360;
+                            if (camYawDeg < 0) camYawDeg += 360;
+                        }
+                        if (typeof camAngleDeg !== 'undefined') {
+                            camAngleDeg = Math.min(135, Math.max(5, camAngleDeg - dy * 0.25));
+                        }
+                        if (typeof updateUISliders === 'function') {
+                            updateUISliders();
+                        }
+                    }
+                }
+            }, { passive: false });
+
+            function handleTouchEnd(e) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === joyTouchId) {
+                        joyTouchId = null;
+                        resetKeys();
+                        if (joystickEl) {
+                            joystickEl.classList.remove('active');
+                        }
+                        if (knobEl) {
+                            knobEl.style.transform = 'translate(-50%, -50%)';
+                        }
+                    } else if (touch.identifier === camTouchId) {
+                        camTouchId = null;
+                    }
+                }
+            }
+
+            window.addEventListener('touchend', handleTouchEnd);
+            window.addEventListener('touchcancel', handleTouchEnd);
+        })();
+    </script>
 </body>
 
 </html>
