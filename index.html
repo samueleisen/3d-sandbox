@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description"
         content="A 3D interactive game with smooth WASD movement, orthographic camera, and real 3D depth built with Three.js.">
     <title>3D Farmland</title>
@@ -154,18 +155,22 @@
                         if (knobEl) {
                             knobEl.style.transform = 'translate(-50%, -50%)';
                         }
+                        if (e.cancelable) e.preventDefault();
                     } else if (touch.clientX >= window.innerWidth * 0.5 && camTouchId === null) {
                         camTouchId = touch.identifier;
                         camPrevX = touch.clientX;
                         camPrevY = touch.clientY;
+                        if (e.cancelable) e.preventDefault();
                     }
                 }
             }, { passive: false });
 
             window.addEventListener('touchmove', function (e) {
+                let handled = false;
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
                     if (touch.identifier === joyTouchId) {
+                        handled = true;
                         const dx = touch.clientX - startX;
                         const dy = touch.clientY - startY;
                         updateKeys(dx, dy);
@@ -179,6 +184,7 @@
                             knobEl.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
                         }
                     } else if (touch.identifier === camTouchId) {
+                        handled = true;
                         const dx = touch.clientX - camPrevX;
                         const dy = touch.clientY - camPrevY;
                         camPrevX = touch.clientX;
@@ -195,6 +201,9 @@
                             updateUISliders();
                         }
                     }
+                }
+                if (handled && e.cancelable) {
+                    e.preventDefault();
                 }
             }, { passive: false });
 
