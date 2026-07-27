@@ -40,9 +40,14 @@
     <div id="ui-overlay" style="padding: 8px 12px; font-size: 11px;">
         <div id="coords" style="opacity: 0.7;">x: 0 &nbsp;|&nbsp; z: 0</div>
         <div id="perf-hud" style="margin-top: 4px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 4px;">
-            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span class="perf-avg">--</span></div>
+            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span
+                    class="perf-avg">--</span></div>
         </div>
     </div>
+
+    <!-- Pure CSS Camera Panel Toggle Button (Off By Default) -->
+    <input type="checkbox" id="toggle-camera-panel" class="panel-toggle-check">
+    <label for="toggle-camera-panel" class="panel-toggle-btn" title="Toggle Camera Panel">⚙️</label>
 
     <div id="camera-panel">
         <h3>Camera Controls</h3>
@@ -89,17 +94,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
-    <!-- Foundation -->
-    <script src="js/scene.js"></script>
 
-    <!-- World & Landscape -->
-    <script src="js/grass.js"></script>
+    <script src="js/Sams.js"></script>
 
-    <!-- Character & Systems -->
-    <script src="js/player.js"></script>
-
-    <!-- Game Loop & Preloader -->
-    <script src="js/preloader.js"></script>
+    <script src="js/Owns.js"></script>
 </body>
 
 </html>

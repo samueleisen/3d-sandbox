@@ -50,9 +50,45 @@ canvas {
     margin: 0 2px;
 }
 
-#camera-panel {
+/* ───────────────────────────────────────────────
+   PURE CSS CAMERA PANEL TOGGLE BUTTON (Zero JS)
+─────────────────────────────────────────────── */
+.panel-toggle-check {
+    display: none;
+}
+
+.panel-toggle-btn {
     position: fixed;
     top: 20px;
+    right: 20px;
+    z-index: 11;
+    width: 32px;
+    height: 32px;
+    background: rgba(10, 10, 20, 0.85);
+    border: 1px solid rgba(200, 255, 200, 0.3);
+    border-radius: 6px;
+    color: #5cf0a0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.panel-toggle-btn:hover {
+    background: rgba(20, 30, 45, 0.95);
+    border-color: #5cf0a0;
+    box-shadow: 0 0 10px rgba(92, 240, 160, 0.4);
+}
+
+#camera-panel {
+    position: fixed;
+    top: 60px;
     right: 20px;
     z-index: 10;
     font-family: 'Courier New', monospace;
@@ -67,6 +103,11 @@ canvas {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     width: 280px;
     user-select: none;
+}
+
+/* Hide camera panel when toggle checkbox is unchecked */
+#toggle-camera-panel:not(:checked) ~ #camera-panel {
+    display: none !important;
 }
 
 #camera-panel h3 {
