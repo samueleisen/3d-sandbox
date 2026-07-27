@@ -6,9 +6,7 @@
   "scripts": {
     "build:wasm": "npx -p assemblyscript asc assembly/grass.ts --target release -O3z --noAssert --outFile build/grass.wasm && npx -p assemblyscript asc assembly/characterPhysics.ts --target release -O3z --noAssert --outFile build/characterPhysics.wasm",
     "build:wasm:player": "npx -p assemblyscript asc assembly/characterPhysics.ts --target release -O3z --noAssert --outFile build/characterPhysics.wasm",
-    "asbuild:grass": "npx -p assemblyscript asc assembly/grass.ts --target release -O3z --noAssert --outFile build/grass.wasm",
-    "build:js": "node scripts/build.js",
-    "build:all": "npm run build:wasm && node scripts/build.js"
+    "asbuild:grass": "npx -p assemblyscript asc assembly/grass.ts --target release -O3z --noAssert --outFile build/grass.wasm"
   },
   "devDependencies": {
     "assemblyscript": "^0.27.34"
