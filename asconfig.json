@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "build/grass.wasm",
+      "outputText": true,
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "noAssert": true
+    }
+  },
+  "options": {
+    "bindings": "esm"
+  }
+}

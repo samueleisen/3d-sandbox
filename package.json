@@ -1,0 +1,16 @@
+{
+  "name": "3d-sandbox",
+  "version": "1.0.0",
+  "description": "3D Grass Landscape WebAssembly Engine",
+  "main": "js/grass.js",
+  "scripts": {
+    "build:wasm": "npx -p assemblyscript asc assembly/grass.ts --target release -O3z --noAssert --outFile build/grass.wasm && npx -p assemblyscript asc assembly/characterPhysics.ts --target release -O3z --noAssert --outFile build/characterPhysics.wasm",
+    "build:wasm:player": "npx -p assemblyscript asc assembly/characterPhysics.ts --target release -O3z --noAssert --outFile build/characterPhysics.wasm",
+    "asbuild:grass": "npx -p assemblyscript asc assembly/grass.ts --target release -O3z --noAssert --outFile build/grass.wasm",
+    "build:js": "node scripts/build.js",
+    "build:all": "npm run build:wasm && node scripts/build.js"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.34"
+  }
+}

@@ -1,7 +1,8 @@
 /* ───────────────────────────────────────────────
-    INTERACTIVE GRASS LANDSCAPE (Deep Narrow Camera Vision Span + Rolling Chunk Grid + GPU GLSL Shader)
-    createGrassLandscape · updateGrassPhysics · updateRollingGrid
+    INTERACTIVE GRASS LANDSCAPE (Strict WebAssembly Core)
+    createGrassLandscape · updateGrassPhysics · updateRollingGrid · initGrassWasm
     Depends on: scene, PAL, WORLD_WIDTH, WORLD_DEPTH, getGroundHeight
+    Requires: build/grass.wasm binary module
 ─────────────────────────────────────────────── */
 
 let grassInstancedMesh = null;
@@ -12,8 +13,10 @@ const CHUNK_SIZE = 400;    // units per chunk square
 const GRID_RADIUS = 5;     // 11x11 chunk grid (-5 to +5)
 const GRID_DIM = GRID_RADIUS * 2 + 1; // 11
 const TOTAL_CHUNKS = GRID_DIM * GRID_DIM; // 121
-let activeGridX = null;
-let activeGridZ = null;
+
+// WASM Module instance state
+let isWasmLoaded = false;
+let grassWasmInstance = null;
 
 // Shared uniforms for GPU GLSL shader deformation
 const grassUniforms = {
@@ -27,171 +30,103 @@ const grassUniforms = {
 };
 
 /**
- * Deterministic 2D hash generator for consistent chunk pseudo-random seeding.
+ * Retrieves a TypedArray view directly into WebAssembly Linear Memory.
  */
-function hash2D(cx, cz, index, seed = 0) {
-    const n = Math.sin(cx * 12.9898 + cz * 78.233 + index * 43758.5453 + seed * 19.19) * 43758.5453;
-    return n - Math.floor(n);
+function getWasmMemoryView(pointer, length, type = 'Float32Array') {
+    if (!grassWasmInstance || !grassWasmInstance.exports.memory) return null;
+    const buffer = grassWasmInstance.exports.memory.buffer;
+    if (type === 'Float32Array') return new Float32Array(buffer, pointer, length);
+    if (type === 'Uint16Array') return new Uint16Array(buffer, pointer, length);
+    if (type === 'Uint8Array') return new Uint8Array(buffer, pointer, length);
+    return null;
 }
 
 /**
- * Creates low-poly tapered grass blade geometry.
- * Pivot is anchored at the bottom (y=0) so bending rotates from the root.
+ * Decodes a UTF-8 string directly from WebAssembly Linear Memory bytes.
+ */
+function getWasmString(pointer, length) {
+    if (!grassWasmInstance || !grassWasmInstance.exports.memory || !pointer || !length) return "";
+    const bytes = new Uint8Array(grassWasmInstance.exports.memory.buffer, pointer, length);
+    return new TextDecoder("utf-8").decode(bytes);
+}
+
+/**
+ * Asserts that the WASM module is loaded and ready.
+ */
+function assertWasmReady() {
+    if (!isWasmLoaded || !grassWasmInstance) {
+        throw new Error("[GrassEngine] FATAL: build/grass.wasm module is missing or not initialized!");
+    }
+}
+
+/**
+ * Creates low-poly tapered grass blade geometry from WASM binary memory.
  */
 function createGrassBladeGeometry() {
-    const w = 2.2;
-    const h = 10.0;
-    const taper = 0.25; // 75% narrower at top tip (1.0 - 0.75 = 0.25)
+    assertWasmReady();
 
-    const halfW = w / 2;
-    const topHalfW = halfW * taper;
-
-    // Offset for the 2nd ("fake") grass cluster placed slightly further
-    const ox = 1.8;
-    const oz = 1.8;
-
-    // 2 Sets of 2 Crossing Quads (0° and 90°): 8 triangles, 16 vertices per instance
-    const positions = new Float32Array([
-        // --- Cluster 1 (Original at 0, 0, 0) ---
-        // Quad 1A: along X-axis (0°)
-        -halfW, 0, 0,
-        halfW, 0, 0,
-        -topHalfW, h, 0,
-        topHalfW, h, 0,
-
-        // Quad 1B: along Z-axis (90°)
-        0, 0, -halfW,
-        0, 0, halfW,
-        0, h, -topHalfW,
-        0, h, topHalfW,
-
-        // --- Cluster 2 (Second grass tuft offset slightly further at ox, oz) ---
-        // Quad 2A: along X-axis (0°)
-        ox - halfW, 0, oz,
-        ox + halfW, 0, oz,
-        ox - topHalfW, h, oz,
-        ox + topHalfW, h, oz,
-
-        // Quad 2B: along Z-axis (90°)
-        ox, 0, oz - halfW,
-        ox, 0, oz + halfW,
-        ox, h, oz - topHalfW,
-        ox, h, oz + topHalfW
-    ]);
-
-    const indices = [
-        // Cluster 1 (0, 0, 0)
-        0, 1, 2, 2, 1, 3,    // Quad 1A
-        4, 5, 6, 6, 5, 7,    // Quad 1B
-
-        // Cluster 2 (ox, 0, oz)
-        8, 9, 10, 10, 9, 11,  // Quad 2A
-        12, 13, 14, 14, 13, 15  // Quad 2B
-    ];
-
-    // Attribute to identify Cluster 1 (0.0) vs Cluster 2 (1.0) for GPU Geo-Morphing
-    const clusters = new Float32Array([
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1, 1, 1, 1, 1, 1, 1, 1
-    ]);
+    const positions = getWasmMemoryView(grassWasmInstance.exports.getPositionsPointer(), 48, 'Float32Array');
+    const indices = getWasmMemoryView(grassWasmInstance.exports.getIndicesPointer(), 24, 'Uint16Array');
+    const clusters = getWasmMemoryView(grassWasmInstance.exports.getClustersPointer(), 16, 'Float32Array');
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('aCluster', new THREE.BufferAttribute(clusters, 1));
-    geo.setIndex(indices);
+    geo.setIndex(Array.from(indices));
     geo.computeVertexNormals();
 
     return geo;
 }
 
 /**
- * Seeds a single chunk cell (cx, cz) starting at instance offset baseIdx.
+ * Recalculates and re-seeds chunks starting from camera position using WASM binary core.
  */
-function seedChunk(cx, cz, baseIdx, bladesPerChunk) {
-    const originX = cx * CHUNK_SIZE - CHUNK_SIZE / 2;
-    const originZ = cz * CHUNK_SIZE - CHUNK_SIZE / 2;
-    const matArray = grassInstancedMesh.instanceMatrix.array;
+function updateRollingGrid(camX, camZ, camDirX = 0, camDirZ = -1) {
+    if (!grassInstancedMesh) return;
+    assertWasmReady();
 
-    for (let i = 0; i < bladesPerChunk; i++) {
-        const idx = baseIdx + i;
-        if (idx >= maxGrassCount) break;
-
-        const offX = hash2D(cx, cz, i, 1) * CHUNK_SIZE;
-        const offZ = hash2D(cx, cz, i, 2) * CHUNK_SIZE;
-        const gx = originX + offX;
-        const gz = originZ + offZ;
-
-        const rawGy = typeof getGroundHeight === 'function' ? getGroundHeight(gx, gz) : 0;
-        const gy = rawGy > 5 ? 0 : rawGy;
-
-        const rotY = hash2D(cx, cz, i, 3) * Math.PI * 2;
-        const baseScale = 0.85 + hash2D(cx, cz, i, 4) * 1.55;
-
-        // Direct 4x4 matrix write into Float32Array (bypasses Object3D math & allocations)
-        const c = Math.cos(rotY) * baseScale;
-        const s = Math.sin(rotY) * baseScale;
-        const m = idx * 16;
-
-        matArray[m] = c;
-        matArray[m + 1] = 0;
-        matArray[m + 2] = -s;
-        matArray[m + 3] = 0;
-
-        matArray[m + 4] = 0;
-        matArray[m + 5] = baseScale;
-        matArray[m + 6] = 0;
-        matArray[m + 7] = 0;
-
-        matArray[m + 8] = s;
-        matArray[m + 9] = 0;
-        matArray[m + 10] = c;
-        matArray[m + 11] = 0;
-
-        matArray[m + 12] = gx;
-        matArray[m + 13] = gy;
-        matArray[m + 14] = gz;
-        matArray[m + 15] = 1;
+    const updated = grassWasmInstance.exports.updateRollingGridWasm(camX, camZ, camDirX, camDirZ, maxGrassCount);
+    if (updated) {
+        grassInstancedMesh.instanceMatrix.needsUpdate = true;
     }
 }
 
 /**
- * Recalculates and re-seeds chunks starting from camera ground position (camX, camZ).
+ * Applies GLSL shaders by pulling shader bytecode directly from WASM linear memory.
  */
-function updateRollingGrid(camX, camZ, camDirX = 0, camDirZ = -1) {
-    if (!grassInstancedMesh) return;
+function applyGrassShader(shader, isDepth = false) {
+    assertWasmReady();
 
-    // Center grid deep along camera vision frustum (+1.5 * CHUNK_SIZE forward)
-    const forwardPx = camX + camDirX * (CHUNK_SIZE * 1.5);
-    const forwardPz = camZ + camDirZ * (CHUNK_SIZE * 1.5);
+    shader.uniforms.uPlayerPos = grassUniforms.uPlayerPos;
+    shader.uniforms.uCamPos = grassUniforms.uCamPos;
+    shader.uniforms.uCamDir = grassUniforms.uCamDir;
+    shader.uniforms.uHalfFovCos = grassUniforms.uHalfFovCos;
+    shader.uniforms.uTime = grassUniforms.uTime;
+    shader.uniforms.uMaxVisDist = grassUniforms.uMaxVisDist;
+    shader.uniforms.uBendRadius = grassUniforms.uBendRadius;
 
-    const currentChunkX = Math.floor((forwardPx + CHUNK_SIZE / 2) / CHUNK_SIZE);
-    const currentChunkZ = Math.floor((forwardPz + CHUNK_SIZE / 2) / CHUNK_SIZE);
+    const headerStr = getWasmString(
+        grassWasmInstance.exports.getHeaderShaderPointer(),
+        grassWasmInstance.exports.getHeaderShaderLength()
+    );
 
-    if (currentChunkX === activeGridX && currentChunkZ === activeGridZ) {
-        return; // Still in the same chunk cell
-    }
+    const ptr = isDepth
+        ? grassWasmInstance.exports.getDepthShaderPointer()
+        : grassWasmInstance.exports.getMainShaderPointer();
+    const len = isDepth
+        ? grassWasmInstance.exports.getDepthShaderLength()
+        : grassWasmInstance.exports.getMainShaderLength();
 
-    activeGridX = currentChunkX;
-    activeGridZ = currentChunkZ;
+    const bodyStr = getWasmString(ptr, len);
 
-    const bladesPerChunk = Math.floor(maxGrassCount / TOTAL_CHUNKS);
-    let chunkIdx = 0;
-
-    for (let cx = currentChunkX - GRID_RADIUS; cx <= currentChunkX + GRID_RADIUS; cx++) {
-        for (let cz = currentChunkZ - GRID_RADIUS; cz <= currentChunkZ + GRID_RADIUS; cz++) {
-            seedChunk(cx, cz, chunkIdx * bladesPerChunk, bladesPerChunk);
-            chunkIdx++;
-        }
-    }
-
-    grassInstancedMesh.instanceMatrix.needsUpdate = true;
+    shader.vertexShader = headerStr + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', bodyStr);
 }
 
 /**
  * Initializes the InstancedMesh grass landscape across the world floor.
  */
 function createGrassLandscape(count = 5000) {
-    // Remove existing grass mesh if present
     if (grassInstancedMesh) {
         scene.remove(grassInstancedMesh);
         if (grassInstancedMesh.geometry) grassInstancedMesh.geometry.dispose();
@@ -199,137 +134,43 @@ function createGrassLandscape(count = 5000) {
         grassInstancedMesh = null;
     }
 
-    if (count <= 0) {
-        return;
-    }
+    if (count <= 0) return;
+    assertWasmReady();
 
     maxGrassCount = count;
-    activeGridX = null;
-    activeGridZ = null;
 
     const geo = createGrassBladeGeometry();
 
     const mat = new THREE.MeshStandardMaterial({
-        color: PAL.grass || 0xf0c830,
+        color: (typeof PAL !== 'undefined' && PAL.grass) ? PAL.grass : 0xf0c830,
         roughness: 0.7,
         metalness: 0.1,
         side: THREE.DoubleSide,
         shadowSide: THREE.DoubleSide
     });
 
-    function applyGrassShader(shader, isDepth = false) {
-        shader.uniforms.uPlayerPos = grassUniforms.uPlayerPos;
-        shader.uniforms.uCamPos = grassUniforms.uCamPos;
-        shader.uniforms.uCamDir = grassUniforms.uCamDir;
-        shader.uniforms.uHalfFovCos = grassUniforms.uHalfFovCos;
-        shader.uniforms.uTime = grassUniforms.uTime;
-        shader.uniforms.uMaxVisDist = grassUniforms.uMaxVisDist;
-        shader.uniforms.uBendRadius = grassUniforms.uBendRadius;
-
-        shader.vertexShader = `
-            attribute float aCluster;
-            uniform vec3 uPlayerPos;
-            uniform vec3 uCamPos;
-            uniform vec3 uCamDir;
-            uniform float uHalfFovCos;
-            uniform float uTime;
-            uniform float uMaxVisDist;
-            uniform float uBendRadius;
-        ` + shader.vertexShader;
-
-        const shadowCutoffChunk = isDepth ? `
-            if (distToCam > 1400.0) {
-                fadeAlpha = 0.0;
-            }
-            transformed *= fadeAlpha;
-        ` : `
-            transformed *= fadeAlpha;
-        `;
-
-        shader.vertexShader = shader.vertexShader.replace(
-            '#include <begin_vertex>',
-            `
-            #include <begin_vertex>
-
-            #ifdef USE_INSTANCING
-                vec4 instWorldPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-            #else
-                vec4 instWorldPos = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-            #endif
-
-            // Vector and distance from CAMERA ground position to instance root
-            vec2 dirFromCam = instWorldPos.xz - uCamPos.xz;
-            float distToCam = length(dirFromCam);
-            float distToPlayer = length(instWorldPos.xz - uPlayerPos.xz);
-
-            // GPU Geo-Morphing LOD: Near (<50) full double-tuft (8 tri / 16 vert); Far (>600) single-tuft (4 tri)
-            if (aCluster > 0.5) {
-                float c2Scale = smoothstep(300.0, 50.0, distToCam);
-                vec3 c2Center = vec3(1.8, 0.0, 1.8);
-                transformed = c2Center + (transformed - c2Center) * c2Scale;
-            }
-
-            // 1. Smooth Distance Scale Dissolve from Camera Position (Horizon Fade)
-            float innerDist = uMaxVisDist * 0.57;
-            float fadeAlpha = 1.0;
-            if (distToCam > innerDist) {
-                float t = clamp((distToCam - innerDist) / (uMaxVisDist - innerDist), 0.0, 1.0);
-                fadeAlpha = 1.0 - (t * t * (3.0 - 2.0 * t)); // Smoothstep curve
-            }
-
-            // 2. Narrow Camera Vision Span Angle Alignment (originating at camera X,Z)
-            if (distToCam > 10.0) {
-                vec2 normDir = dirFromCam / distToCam;
-                float dotCam = dot(normDir, uCamDir.xz);
-                if (dotCam < uHalfFovCos) {
-                    float fovFade = clamp((dotCam - (uHalfFovCos - 0.25)) / 0.25, 0.0, 1.0);
-                    fadeAlpha *= fovFade;
-                }
-            }
-
-            ${shadowCutoffChunk}
-
-            // Height-based influence factor (0 at root y=0, 1 at top tip y=10)
-            float heightFactor = clamp(position.y / 10.0, 0.0, 1.0);
-
-            // 3. GPU Ambient Wind Sway (Bypassed beyond 1600 units for GPU performance)
-            if (distToCam < 600.0) {
-                float windSway = sin(uTime * 2.8 + instWorldPos.x * 0.08 + instWorldPos.z * 0.08) * 0.45 * heightFactor;
-                transformed.x += windSway;
-            }
-
-            // 4. GPU Player Collision Bending Force (from player feet)
-            if (distToPlayer < uBendRadius && abs(instWorldPos.y - uPlayerPos.y) < 25.0) {
-                vec2 pushDir = normalize(instWorldPos.xz - uPlayerPos.xz + vec2(0.0001));
-                float bendFactor = (1.0 - distToPlayer / uBendRadius) * 4.5 * heightFactor;
-                transformed.x += pushDir.x * bendFactor;
-                transformed.z += pushDir.y * bendFactor;
-                transformed.y -= bendFactor * 0.3; // Slight downward displacement when bent over
-            }
-            `
-        );
-    }
-
     mat.onBeforeCompile = function (shader) {
         applyGrassShader(shader, false);
     };
 
+    const wasmMatArray = getWasmMemoryView(grassWasmInstance.exports.getMatrixBufferPointer(), count * 16, 'Float32Array');
     grassInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
+    grassInstancedMesh.instanceMatrix = new THREE.BufferAttribute(wasmMatArray, 16);
     grassInstancedMesh.castShadow = true;
     grassInstancedMesh.receiveShadow = true;
 
-    // Custom depth material for shadow pass (culls shadow map rendering beyond 1400 units)
     const customDepthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     customDepthMat.onBeforeCompile = function (shader) {
         applyGrassShader(shader, true);
     };
     grassInstancedMesh.customDepthMaterial = customDepthMat;
 
-    // Initial grid seed centered at (0, 0)
     updateRollingGrid(0, 0, 0, -1);
 
-    scene.add(grassInstancedMesh);
-    console.log(`[grass] Created ${count} Deep Narrow Camera Vision Span GPU grass blades.`);
+    if (typeof scene !== 'undefined') {
+        scene.add(grassInstancedMesh);
+    }
+    console.log(`[grass] Created ${count} GPU grass blades using Strict WASM core.`);
 }
 
 /**
@@ -337,30 +178,25 @@ function createGrassLandscape(count = 5000) {
  */
 function updateGrassPhysics(px, py, pz, dt, time) {
     if (!grassInstancedMesh) return;
+    assertWasmReady();
 
-    // Calculate camera look vector (pointing from camera through player into the forward view)
-    const yawRad = THREE.MathUtils.degToRad(typeof camYawDeg !== 'undefined' ? camYawDeg : 0);
-    const camDirX = -Math.sin(yawRad);
-    const camDirZ = -Math.cos(yawRad);
+    const yawDeg = typeof camYawDeg !== 'undefined' ? camYawDeg : 0;
+    const fovDeg = typeof camFov !== 'undefined' ? camFov : 45;
+    const aspectVal = typeof aspect !== 'undefined' ? aspect : (window.innerWidth / window.innerHeight);
 
-    // Get camera ground coordinates
+    const halfFovCos = grassWasmInstance.exports.computeCamParamsWasm(yawDeg, fovDeg, aspectVal);
+    const camDirX = grassWasmInstance.exports.lastCamDirX ? grassWasmInstance.exports.lastCamDirX.value : 0;
+    const camDirZ = grassWasmInstance.exports.lastCamDirZ ? grassWasmInstance.exports.lastCamDirZ.value : -1;
+
     const camX = typeof camera !== 'undefined' ? camera.position.x : px;
     const camZ = typeof camera !== 'undefined' ? camera.position.z : pz;
 
-    // Calculate narrow horizontal half-FOV angle cosine
-    const vertFovRad = THREE.MathUtils.degToRad(typeof camFov !== 'undefined' ? camFov : 45);
-    const aspectVal = typeof aspect !== 'undefined' ? aspect : (window.innerWidth / window.innerHeight);
-    const halfHovRad = Math.atan(Math.tan(vertFovRad / 2) * aspectVal);
-    const halfFovCos = Math.cos(halfHovRad + 0.05); // Narrow 0.05 rad safety buffer
-
-    // Pass camera position, direction & FOV cosine to GLSL shader & update rolling grid
     grassUniforms.uCamPos.value.set(camX, 0, camZ);
     grassUniforms.uCamDir.value.set(camDirX, 0, camDirZ);
     grassUniforms.uHalfFovCos.value = halfFovCos;
 
     updateRollingGrid(camX, camZ, camDirX, camDirZ);
 
-    // Update GLSL Uniforms on the material
     grassUniforms.uPlayerPos.value.set(px, py, pz);
     grassUniforms.uTime.value = time;
 
@@ -371,15 +207,43 @@ function updateGrassPhysics(px, py, pz, dt, time) {
     }
 }
 
-// Spawns grass landscape on script load
-if (typeof createGrassLandscape === 'function') {
-    createGrassLandscape(80000);
+/**
+ * Initializes and loads build/grass.wasm binary module.
+ */
+async function initGrassWasm() {
+    try {
+        const response = await fetch('build/grass.wasm');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const bytes = await response.arrayBuffer();
+        const wasmModule = await WebAssembly.instantiate(bytes, {
+            env: {
+                abort: (msg, file, line, col) => console.error(`[WASM Abort] ${file}:${line}:${col} - ${msg}`)
+            }
+        });
+
+        grassWasmInstance = wasmModule.instance;
+        isWasmLoaded = true;
+
+        if (grassWasmInstance.exports.initGrassBladeGeometry) {
+            grassWasmInstance.exports.initGrassBladeGeometry();
+        }
+        if (grassWasmInstance.exports.initGrassShadersWasm) {
+            grassWasmInstance.exports.initGrassShadersWasm();
+        }
+
+        console.log('[grass] WebAssembly build/grass.wasm core loaded successfully.');
+        createGrassLandscape(maxGrassCount);
+    } catch (err) {
+        console.error('[grass] FATAL: Failed to load build/grass.wasm:', err);
+    }
 }
+
+// Initiate WASM async fetch on script load
+initGrassWasm();
 
 /* ───────────────────────────────────────────────
     CAMERA FOV VISION BOUNDARY HELPER
-    Draws 3D glowing boundary lines simulating the camera's
-    exact horizontal vision cone (left, right, center rays & arc).
 ─────────────────────────────────────────────── */
 
 let fovHelperLines = null;
@@ -410,7 +274,9 @@ function createCameraFOVHelper() {
 
     fovHelperLines = new THREE.LineSegments(geo, mat);
     fovHelperLines.renderOrder = 999;
-    scene.add(fovHelperLines);
+    if (typeof scene !== 'undefined') {
+        scene.add(fovHelperLines);
+    }
 }
 
 function updateCameraFOVHelper(px, py, pz) {
@@ -420,57 +286,27 @@ function updateCameraFOVHelper(px, py, pz) {
 
     fovHelperLines.visible = fovHelperEnabled;
     if (!fovHelperEnabled) return;
+    assertWasmReady();
 
-    const yawRad = THREE.MathUtils.degToRad(typeof camYawDeg !== 'undefined' ? camYawDeg : 0);
-
-    const vertFovRad = THREE.MathUtils.degToRad(typeof camFov !== 'undefined' ? camFov : 45);
+    const yawDeg = typeof camYawDeg !== 'undefined' ? camYawDeg : 0;
+    const fovDeg = typeof camFov !== 'undefined' ? camFov : 45;
     const aspectVal = typeof aspect !== 'undefined' ? aspect : (window.innerWidth / window.innerHeight);
-    const halfHovRad = Math.atan(Math.tan(vertFovRad / 2) * aspectVal) + 0.05;
-
     const maxDist = typeof maxVisDist !== 'undefined' ? Math.min(maxVisDist * 0.55, 1400) : 1400;
     const camX = typeof camera !== 'undefined' ? camera.position.x : px;
     const camZ = typeof camera !== 'undefined' ? camera.position.z : pz;
     const originY = py + 2.0;
 
-    const centerAngle = yawRad + Math.PI;
-    const leftAngle   = centerAngle - halfHovRad;
-    const rightAngle  = centerAngle + halfHovRad;
-
     const posAttr = fovHelperLines.geometry.attributes.position;
-    const array = posAttr.array;
-    let idx = 0;
 
-    array[idx++] = camX; array[idx++] = originY; array[idx++] = camZ;
-    array[idx++] = camX + Math.sin(centerAngle) * maxDist;
-    array[idx++] = originY;
-    array[idx++] = camZ + Math.cos(centerAngle) * maxDist;
-
-    array[idx++] = camX; array[idx++] = originY; array[idx++] = camZ;
-    array[idx++] = camX + Math.sin(leftAngle) * maxDist;
-    array[idx++] = originY;
-    array[idx++] = camZ + Math.cos(leftAngle) * maxDist;
-
-    array[idx++] = camX; array[idx++] = originY; array[idx++] = camZ;
-    array[idx++] = camX + Math.sin(rightAngle) * maxDist;
-    array[idx++] = originY;
-    array[idx++] = camZ + Math.cos(rightAngle) * maxDist;
-
-    const segments = 32;
-    for (let i = 0; i < segments; i++) {
-        const t1 = i / segments;
-        const t2 = (i + 1) / segments;
-        const a1 = leftAngle + (rightAngle - leftAngle) * t1;
-        const a2 = leftAngle + (rightAngle - leftAngle) * t2;
-
-        array[idx++] = px + Math.sin(a1) * maxDist;
-        array[idx++] = originY;
-        array[idx++] = pz + Math.cos(a1) * maxDist;
-
-        array[idx++] = px + Math.sin(a2) * maxDist;
-        array[idx++] = originY;
-        array[idx++] = pz + Math.cos(a2) * maxDist;
+    grassWasmInstance.exports.computeFovHelperLinesWasm(
+        camX, camZ, originY,
+        px, pz,
+        yawDeg, fovDeg, aspectVal, maxDist
+    );
+    const wasmView = getWasmMemoryView(grassWasmInstance.exports.getFovHelperBufferPointer(), 210, 'Float32Array');
+    if (wasmView) {
+        posAttr.array.set(wasmView);
     }
 
     posAttr.needsUpdate = true;
 }
-

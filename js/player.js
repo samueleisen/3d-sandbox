@@ -1,9 +1,10 @@
 /* ───────────────────────────────────────────────
-    UNIFIED PLAYER & CHARACTER PHYSICS ENGINE
+    UNIFIED PLAYER & CHARACTER PHYSICS ENGINE (Strict WebAssembly Core)
     GLTF Model Loader · Input Listeners (WASD + Space) ·
-    AABB Obstacle Collision Response · Ground Elevation Detection ·
-    Velocity-Based Physics & Jump Gravity · Facing Rotation ·
-    Locomotion Animations · Procedural Ponytail Hair Physics
+    WASM AABB Obstacle Collision Response · WASM Ground Elevation Detection ·
+    WASM Velocity-Based Physics & Jump Gravity · WASM Facing Rotation ·
+    Locomotion Animations · WASM Procedural Ponytail Hair Dynamics
+    Requires: build/characterPhysics.wasm binary module
 ─────────────────────────────────────────────── */
 
 // ── Keyboard Input State & Event Listeners ────────────────────
@@ -33,15 +34,83 @@ window.addEventListener('blur', () => {
 
 // ── Player Container & Ground Shadow ─────────────────────────
 const playerGroup = new THREE.Group();
-scene.add(playerGroup);
+if (typeof scene !== 'undefined') {
+    scene.add(playerGroup);
+}
 
 const pShadow = new THREE.Mesh(
-    new THREE.CircleGeometry((PLAYER_RADIUS + 4) * 0.5, 16),
-    new THREE.MeshBasicMaterial({ color: PAL.shadow, transparent: true, opacity: 0.5 })
+    new THREE.CircleGeometry(((typeof PLAYER_RADIUS !== 'undefined' ? PLAYER_RADIUS : 6) + 4) * 0.5, 16),
+    new THREE.MeshBasicMaterial({ color: (typeof PAL !== 'undefined' && PAL.shadow) ? PAL.shadow : 0x000000, transparent: true, opacity: 0.5 })
 );
 pShadow.rotation.x = -Math.PI / 2;
 pShadow.position.y = 0.6;
-scene.add(pShadow);
+if (typeof scene !== 'undefined') {
+    scene.add(pShadow);
+}
+
+// ── WASM State & Module Loader ───────────────────────────────
+let isPlayerWasmLoaded = false;
+let playerWasmInstance = null;
+
+function getWasmMemoryViewPlayer(pointer, length) {
+    if (!playerWasmInstance || !playerWasmInstance.exports.memory) return null;
+    return new Float32Array(playerWasmInstance.exports.memory.buffer, pointer, length);
+}
+
+function assertPlayerWasmReady() {
+    if (!isPlayerWasmLoaded || !playerWasmInstance) {
+        throw new Error("[player] FATAL: build/characterPhysics.wasm module is missing or not initialized!");
+    }
+}
+
+function syncObstaclesToWasm() {
+    if (!isPlayerWasmLoaded || !playerWasmInstance) return;
+    if (typeof obstacles === 'undefined' || !obstacles || obstacles.length === 0) {
+        playerWasmInstance.exports.setObstacleCount(0);
+        return;
+    }
+
+    const count = Math.min(obstacles.length, 256);
+    const ptr = playerWasmInstance.exports.getObstaclesPointer();
+    const view = getWasmMemoryViewPlayer(ptr, count * 6);
+    if (!view) return;
+
+    for (let i = 0; i < count; i++) {
+        const box = obstacles[i].box;
+        const idx = i * 6;
+        view[idx] = box.min.x;
+        view[idx + 1] = box.min.y;
+        view[idx + 2] = box.min.z;
+        view[idx + 3] = box.max.x;
+        view[idx + 4] = box.max.y;
+        view[idx + 5] = box.max.z;
+    }
+    playerWasmInstance.exports.setObstacleCount(count);
+}
+
+async function initPlayerWasm() {
+    try {
+        const response = await fetch('build/characterPhysics.wasm');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const bytes = await response.arrayBuffer();
+        const wasmModule = await WebAssembly.instantiate(bytes, {
+            env: {
+                abort: (msg, file, line, col) => console.error(`[Player WASM Abort] ${file}:${line}:${col} - ${msg}`)
+            }
+        });
+
+        playerWasmInstance = wasmModule.instance;
+        isPlayerWasmLoaded = true;
+
+        syncObstaclesToWasm();
+        console.log('[player] WebAssembly build/characterPhysics.wasm initialized successfully.');
+    } catch (err) {
+        console.error('[player] FATAL: Failed to load build/characterPhysics.wasm:', err);
+    }
+}
+
+initPlayerWasm();
 
 // ── Animation & Controller State ─────────────────────────────
 let mixer = null;
@@ -54,28 +123,14 @@ const animations = {};
 let glbReady = false;
 const PLAYER_GLB = 'HeroMC-Animation-color.glb';
 
-const WALK_FADE_IN          = 0.18;
-const WALK_FADE_OUT         = 0.25;
-const JUMP_LAUNCH_BLEND     = 0.14;
-const MIN_WALK_SPEED        = 8.0;
-const WALK_ANIM_SPEED_MULT  = 1.35;
-
-let velX = 0;
-let velY = 0;
-let velZ = 0;
+const WALK_FADE_IN = 0.18;
+const WALK_FADE_OUT = 0.25;
+const JUMP_LAUNCH_BLEND = 0.14;
+const MIN_WALK_SPEED = 8.0;
+const WALK_ANIM_SPEED_MULT = 1.35;
 
 // ── Ponytail Hair Secondary Physics State ─────────────────────
 let ponytailBones = [];
-let prevPx = 0;
-let prevPy = 0;
-let prevPz = 0;
-let prevYaw = 0;
-let ponytailInitialized = false;
-
-const smoothedPitch = [0, 0, 0, 0, 0];
-const smoothedRoll = [0, 0, 0, 0, 0];
-const smoothedYaw = [0, 0, 0, 0, 0];
-
 const _additiveQuat = new THREE.Quaternion();
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
@@ -93,82 +148,39 @@ function initPonytailBones(model) {
         }
     });
     const foundCount = ponytailBones.filter(Boolean).length;
-    console.log(`[player] Found ${foundCount}/5 ponytail bones for procedural physics.`);
+    console.log(`[player] Found ${foundCount}/5 ponytail bones for WASM secondary physics.`);
 }
 
 function updatePonytailPhysics(dt) {
     if (!ponytailBones || ponytailBones.length === 0 || !playerGroup) return;
     if (dt <= 0) return;
+    assertPlayerWasmReady();
 
-    const px = playerGroup.position.x;
-    const py = playerGroup.position.y;
-    const pz = playerGroup.position.z;
-    const currentYaw = playerGroup.rotation.y;
+    const px = playerWasmInstance.exports.px.value;
+    const py = playerWasmInstance.exports.py.value;
+    const pz = playerWasmInstance.exports.pz.value;
+    const rotY = playerWasmInstance.exports.rotY.value;
 
-    if (!ponytailInitialized) {
-        prevPx = px;
-        prevPy = py;
-        prevPz = pz;
-        prevYaw = currentYaw;
-        ponytailInitialized = true;
-        return;
-    }
+    playerWasmInstance.exports.updatePonytailPhysicsWasm(dt, px, py, pz, rotY);
 
-    const vx = (px - prevPx) / dt;
-    const vy = (py - prevPy) / dt;
-    const vz = (pz - prevPz) / dt;
-
-    let yawDiff = currentYaw - prevYaw;
-    while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
-    while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
-    const yawRate = yawDiff / dt;
-
-    prevPx = px;
-    prevPy = py;
-    prevPz = pz;
-    prevYaw = currentYaw;
-
-    const sinY = Math.sin(currentYaw);
-    const cosY = Math.cos(currentYaw);
-
-    const vForward = -(vx * sinY + vz * cosY);
-    const vRight = vx * cosY - vz * sinY;
-
-    const speedRatio = THREE.MathUtils.clamp(vForward / PLAYER_SPEED, -0.5, 1.0);
-    const vyFactor = THREE.MathUtils.clamp(vy * 0.0035, -0.15, 0.15);
-    const targetBasePitch = -speedRatio * 0.55 - vyFactor;
-
-    const targetBaseRoll = THREE.MathUtils.clamp(-vRight / PLAYER_SPEED * 0.30 - yawRate * 0.08, -0.35, 0.35);
-    const targetBaseYaw = THREE.MathUtils.clamp(-yawRate * 0.10, -0.20, 0.20);
-
-    const chainFactors = [0.05, 0.15, 1.10, 0.75, 0.90];
-    const chainSum = 2.95;
-    const MAX_TOTAL_PITCH = THREE.MathUtils.degToRad(115);
-
-    const maxBasePitch = MAX_TOTAL_PITCH / chainSum;
-    const clampedBasePitch = THREE.MathUtils.clamp(targetBasePitch, -maxBasePitch, maxBasePitch);
-
-    const lerpSpeed = 6.0;
+    const ptr = playerWasmInstance.exports.getPonytailBufferPointer();
+    const ponytailView = getWasmMemoryViewPlayer(ptr, 15);
+    if (!ponytailView) return;
 
     for (let i = 0; i < 5; i++) {
         const bone = ponytailBones[i];
         if (!bone) continue;
 
-        const factor = chainFactors[i];
-        const targetPitch = clampedBasePitch * factor;
-        const targetRoll = targetBaseRoll * factor;
-        const targetYaw = targetBaseYaw * factor;
-
-        const alpha = 1.0 - Math.exp(-lerpSpeed * dt);
-        smoothedPitch[i] += (targetPitch - smoothedPitch[i]) * alpha;
-        smoothedRoll[i] += (targetRoll - smoothedRoll[i]) * alpha;
-        smoothedYaw[i] += (targetYaw - smoothedYaw[i]) * alpha;
+        const idx = i * 3;
+        const pitch = ponytailView[idx];
+        const yaw = ponytailView[idx + 1];
+        const roll = ponytailView[idx + 2];
 
         if (bone._restQuaternion) {
             bone.quaternion.copy(bone._restQuaternion);
         }
 
-        _euler.set(smoothedPitch[i], smoothedYaw[i], smoothedRoll[i], 'YXZ');
+        _euler.set(pitch, yaw, roll, 'YXZ');
         _additiveQuat.setFromEuler(_euler);
         bone.quaternion.multiply(_additiveQuat);
     }
@@ -187,7 +199,8 @@ _loader.load(
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
-        if (size.y > 0) model.scale.setScalar(PLAYER_HEIGHT / size.y);
+        const pHeight = typeof PLAYER_HEIGHT !== 'undefined' ? PLAYER_HEIGHT : 16.0;
+        if (size.y > 0) model.scale.setScalar(pHeight / size.y);
 
         model.traverse(function (node) {
             if (node.isMesh) {
@@ -240,117 +253,50 @@ _loader.load(
 );
 
 // ─────────────────────────────────────────────────────────────
-//  3D AABB Obstacle Collision Response
+//  Ground Elevation Detection Helper API
 // ─────────────────────────────────────────────────────────────
-const _playerBox = new THREE.Box3();
-
-function getPlayerAABB(px, py = 0, pz = 0) {
-    _playerBox.min.set(px - PLAYER_RADIUS, py,                 pz - PLAYER_RADIUS);
-    _playerBox.max.set(px + PLAYER_RADIUS, py + PLAYER_HEIGHT,  pz + PLAYER_RADIUS);
-    return _playerBox;
-}
-
-function testCollision(px, py = 0, pz = 0) {
-    if (typeof obstacles === 'undefined' || !obstacles || obstacles.length === 0) return false;
-    const pBox = getPlayerAABB(px, py, pz);
-    const EPSILON = 0.5;
-
-    for (let i = 0; i < obstacles.length; i++) {
-        const obsBox = obstacles[i].box;
-        if (py >= obsBox.max.y - EPSILON) {
-            continue;
-        }
-        if (pBox.intersectsBox(obsBox)) return true;
+function getGroundHeight(x, z, radius = 6.0) {
+    if (isPlayerWasmLoaded && playerWasmInstance && playerWasmInstance.exports.getGroundHeightWasm) {
+        return playerWasmInstance.exports.getGroundHeightWasm(x, z, radius);
     }
-    return false;
+    return 0;
 }
 
 // ─────────────────────────────────────────────────────────────
 //  Ground Elevation Detection & Player Controller
 // ─────────────────────────────────────────────────────────────
-function getGroundHeight(x, z, radius = PLAYER_RADIUS) {
-    let groundY = 0;
-    if (typeof obstacles !== 'undefined' && obstacles) {
-        for (let i = 0; i < obstacles.length; i++) {
-            const box = obstacles[i].box;
-            if (x + radius > box.min.x && x - radius < box.max.x &&
-                z + radius > box.min.z && z - radius < box.max.z) {
-                if (box.max.y > groundY) {
-                    groundY = box.max.y;
-                }
-            }
-        }
-    }
-    return groundY;
-}
-
 function updatePlayerController(dt) {
     if (mixer) mixer.update(dt);
     if (!glbReady) return;
+    assertPlayerWasmReady();
 
-    /* 1. Input vector & Camera-Relative Movement */
-    let rawDx = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-    let rawDz = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+    syncObstaclesToWasm();
 
-    const yawRad = THREE.MathUtils.degToRad(typeof camYawDeg !== 'undefined' ? camYawDeg : 0);
-    const moveX =  rawDx * Math.cos(yawRad) + rawDz * Math.sin(yawRad);
-    const moveZ = -rawDx * Math.sin(yawRad) + rawDz * Math.cos(yawRad);
+    const yawDeg = typeof camYawDeg !== 'undefined' ? camYawDeg : 0;
 
-    const inputLen = Math.sqrt(moveX * moveX + moveZ * moveZ);
-    let dirX = 0;
-    let dirZ = 0;
-    if (inputLen > 0) {
-        dirX = moveX / inputLen;
-        dirZ = moveZ / inputLen;
-    }
+    // Execute WASM Character Physics Tick
+    playerWasmInstance.exports.updatePlayerPhysicsWasm(
+        dt,
+        keys.w, keys.a, keys.s, keys.d, keys.space,
+        yawDeg
+    );
 
-    const targetVelX = dirX * PLAYER_SPEED;
-    const targetVelZ = dirZ * PLAYER_SPEED;
+    // Read updated physics state directly from WASM exported registers
+    const px = playerWasmInstance.exports.px.value;
+    const py = playerWasmInstance.exports.py.value;
+    const pz = playerWasmInstance.exports.pz.value;
+    const velY = playerWasmInstance.exports.velY.value;
+    const rotY = playerWasmInstance.exports.rotY.value;
+    const wasmGrounded = playerWasmInstance.exports.isGrounded.value;
+    const wasmWalking = playerWasmInstance.exports.isWalking.value;
+    const wasmLanded = playerWasmInstance.exports.justLanded.value;
 
-    /* 2. Acceleration & Friction */
-    if (inputLen > 0) {
-        velX += (targetVelX - velX) * Math.min(1, 16 * dt);
-        velZ += (targetVelZ - velZ) * Math.min(1, 16 * dt);
-    } else {
-        velX += (0 - velX) * Math.min(1, PLAYER_FRICTION * dt);
-        velZ += (0 - velZ) * Math.min(1, PLAYER_FRICTION * dt);
-        if (Math.abs(velX) < 0.1) velX = 0;
-        if (Math.abs(velZ) < 0.1) velZ = 0;
-    }
+    /* 1. Update Player Object Transforms */
+    playerGroup.position.set(px, py, pz);
+    playerGroup.rotation.y = rotY;
 
-    /* 3. Displacement & Collision Response */
-    let px = playerGroup.position.x;
-    let py = playerGroup.position.y;
-    let pz = playerGroup.position.z;
-
-    const prevX = px;
-    const prevZ = pz;
-
-    const dx = velX * dt;
-    const dz = velZ * dt;
-
-    const newX = px + dx;
-    if (!testCollision(newX, py, pz)) {
-        px = newX;
-    } else {
-        velX = 0;
-    }
-
-    const newZ = pz + dz;
-    if (!testCollision(px, py, newZ)) {
-        pz = newZ;
-    } else {
-        velZ = 0;
-    }
-
-    /* 4. Ground Height & Jump Physics */
-    const targetGroundY = getGroundHeight(px, pz);
-    let justLanded = false;
-
-    if (keys.space && isGrounded) {
-        isGrounded = false;
-        velY = JUMP_POWER;
-
+    /* 2. Jump Animation Launch */
+    if (keys.space && isGrounded && !wasmGrounded) {
         if (idleAction) idleAction.fadeOut(JUMP_LAUNCH_BLEND);
         if (walkAction) walkAction.fadeOut(JUMP_LAUNCH_BLEND);
 
@@ -364,16 +310,11 @@ function updatePlayerController(dt) {
         }
     }
 
-    if (!isGrounded) {
-        velY -= JUMP_GRAVITY * dt;
-        py += velY * dt;
+    isGrounded = wasmGrounded;
 
+    if (!isGrounded) {
         if (jumpAction) {
-            if (velY < 0) {
-                jumpAction.setEffectiveTimeScale(1.75);
-            } else {
-                jumpAction.setEffectiveTimeScale(1.0);
-            }
+            jumpAction.setEffectiveTimeScale(velY < 0 ? 1.75 : 1.0);
         }
 
         if (velY < 0 && jumpAction && !jumpAction.isRunning()) {
@@ -392,60 +333,26 @@ function updatePlayerController(dt) {
                 jumpAction.time = 1.55;
             }
         }
-
-        if (py <= targetGroundY) {
-            py = targetGroundY;
-            velY = 0;
-            isGrounded = true;
-            justLanded = true;
-
-            if (jumpAction) {
-                jumpAction.setEffectiveTimeScale(1.0);
-                jumpAction.time = 1.6667;
-                jumpAction.fadeOut(0.30);
-            }
-        }
-    } else {
-        if (py > targetGroundY + 0.1) {
-            isGrounded = false;
-            velY = 0;
-        } else {
-            py = targetGroundY;
-        }
     }
 
-    playerGroup.position.set(px, py, pz);
+    if (wasmLanded && jumpAction) {
+        jumpAction.setEffectiveTimeScale(1.0);
+        jumpAction.time = 1.6667;
+        jumpAction.fadeOut(0.30);
+    }
 
-    // Update ground shadow
+    /* 3. Update Ground Shadow */
+    const targetGroundY = getGroundHeight(px, pz);
     pShadow.position.set(px, targetGroundY + 0.6, pz);
     const elevation = Math.max(0, py - targetGroundY);
     const shadowFactor = THREE.MathUtils.clamp(1.0 - (elevation / 70.0) * 0.45, 0.55, 1.0);
     pShadow.scale.set(shadowFactor, shadowFactor, 1.0);
     pShadow.material.opacity = THREE.MathUtils.clamp(0.5 - (elevation / 70.0) * 0.25, 0.25, 0.5);
 
-    /* 5. Facing Rotation */
-    const actualDx = px - prevX;
-    const actualDz = pz - prevZ;
-    const actualSpeed = Math.sqrt(actualDx * actualDx + actualDz * actualDz) / Math.max(dt, 0.0001);
-    const isMoving = actualSpeed > MIN_WALK_SPEED;
-
-    if (isMoving || inputLen > 0) {
-        const facingX = Math.abs(actualDx) > 0.01 ? actualDx : dirX;
-        const facingZ = Math.abs(actualDz) > 0.01 ? actualDz : dirZ;
-
-        if (facingX !== 0 || facingZ !== 0) {
-            const targetAngle = Math.atan2(facingX, facingZ);
-            let diff = targetAngle - playerGroup.rotation.y;
-            while (diff >  Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            playerGroup.rotation.y += diff * Math.min(1, 14 * dt);
-        }
-    }
-
-    /* 6. Locomotion Cross-Fade */
+    /* 4. Locomotion Cross-Fade */
     if (isGrounded) {
-        if (justLanded) {
-            if (isMoving) {
+        if (wasmLanded) {
+            if (wasmWalking) {
                 if (idleAction) idleAction.fadeOut(WALK_FADE_IN);
                 if (walkAction) walkAction.reset().fadeIn(WALK_FADE_IN).play();
                 isWalking = true;
@@ -454,11 +361,11 @@ function updatePlayerController(dt) {
                 if (idleAction) idleAction.reset().fadeIn(WALK_FADE_OUT).play();
                 isWalking = false;
             }
-        } else if (isMoving && !isWalking) {
+        } else if (wasmWalking && !isWalking) {
             if (idleAction) idleAction.fadeOut(WALK_FADE_IN);
             if (walkAction) walkAction.reset().fadeIn(WALK_FADE_IN).play();
             isWalking = true;
-        } else if (!isMoving && isWalking) {
+        } else if (!wasmWalking && isWalking) {
             if (walkAction) walkAction.fadeOut(WALK_FADE_OUT);
             if (idleAction) idleAction.reset().fadeIn(WALK_FADE_OUT).play();
             isWalking = false;
@@ -466,10 +373,14 @@ function updatePlayerController(dt) {
     }
 
     if (walkAction && isWalking && isGrounded) {
-        const timeScale = THREE.MathUtils.clamp((actualSpeed / PLAYER_SPEED) * WALK_ANIM_SPEED_MULT, 0.5, 1.7);
+        const pSpeed = typeof PLAYER_SPEED !== 'undefined' ? PLAYER_SPEED : 300.0;
+        const velXVal = playerWasmInstance.exports.velX.value;
+        const velZVal = playerWasmInstance.exports.velZ.value;
+        const speed = Math.sqrt(velXVal * velXVal + velZVal * velZVal);
+        const timeScale = THREE.MathUtils.clamp((speed / pSpeed) * WALK_ANIM_SPEED_MULT, 0.5, 1.7);
         walkAction.setEffectiveTimeScale(timeScale);
     }
 
-    /* 7. Secondary Ponytail Physics Tick */
+    /* 5. WASM Secondary Ponytail Physics Tick */
     updatePonytailPhysics(dt);
 }

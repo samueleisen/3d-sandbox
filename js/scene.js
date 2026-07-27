@@ -179,16 +179,16 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const ctrlTilt         = document.getElementById('ctrl-tilt');
-const ctrlYaw          = document.getElementById('ctrl-yaw');
-const ctrlHeight       = document.getElementById('ctrl-height');
-const ctrlFov          = document.getElementById('ctrl-fov');
+const ctrlTilt = document.getElementById('ctrl-tilt');
+const ctrlYaw = document.getElementById('ctrl-yaw');
+const ctrlHeight = document.getElementById('ctrl-height');
+const ctrlFov = document.getElementById('ctrl-fov');
 const ctrlGrassDensity = document.getElementById('ctrl-grass-density');
 
-const valTilt   = document.getElementById('val-tilt');
-const valYaw    = document.getElementById('val-yaw');
+const valTilt = document.getElementById('val-tilt');
+const valYaw = document.getElementById('val-yaw');
 const valHeight = document.getElementById('val-height');
-const valFov    = document.getElementById('val-fov');
+const valFov = document.getElementById('val-fov');
 
 function syncUI() {
     if (ctrlTilt) camAngleDeg = parseFloat(ctrlTilt.value);
@@ -475,7 +475,7 @@ for (let i = 0; i < posAttr.count; i++) {
     const ly = posAttr.getY(i);
     const t = Math.max(0, Math.min(1, 0.5 - ly / (WORLD_RADIUS * 2)));
     _tempColor.copy(colorNeg).lerp(colorPos, t);
-    floorColors[i * 3]     = _tempColor.r;
+    floorColors[i * 3] = _tempColor.r;
     floorColors[i * 3 + 1] = _tempColor.g;
     floorColors[i * 3 + 2] = _tempColor.b;
 }
@@ -499,11 +499,11 @@ const animatedMonuments = [];
 function createTallMonolith(x, z) {
     const group = new THREE.Group();
 
-    const rockMat = new THREE.MeshStandardMaterial({ 
-        color: 0x2b2d3d, 
-        roughness: 0.9, 
-        metalness: 0.1, 
-        flatShading: true 
+    const rockMat = new THREE.MeshStandardMaterial({
+        color: 0x2b2d3d,
+        roughness: 0.9,
+        metalness: 0.1,
+        flatShading: true
     });
 
     const base1Geo = new THREE.CylinderGeometry(140, 180, 40, 8);
@@ -546,12 +546,12 @@ function createTallMonolith(x, z) {
     group.add(base2);
 
     const shaftGeo = new THREE.CylinderGeometry(40, 75, 460, 8);
-    const shaftMat = new THREE.MeshStandardMaterial({ 
-        color: 0x4d3e58, 
-        emissive: 0x1a2e47, 
+    const shaftMat = new THREE.MeshStandardMaterial({
+        color: 0x4d3e58,
+        emissive: 0x1a2e47,
         emissiveIntensity: 0.5,
-        roughness: 0.6, 
-        flatShading: true 
+        roughness: 0.6,
+        flatShading: true
     });
     const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
     shaftMesh.position.y = 65 + 230;
