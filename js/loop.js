@@ -98,9 +98,9 @@ function animate() {
     }
     camera.lookAt(px, targetY, pz);
 
-    /* ── Stylized Sky Dome Position Tracking ── */
+    /* ── Stylized Sky Dome Position Tracking & Cloud Motion ── */
     if (typeof updateSky === 'function') {
-        updateSky();
+        updateSky(dt, time);
     }
 
     /* ── World-Locked Player-Centered Wide Shadow Tracking (0% Camera Yaw Rotation Impact) ── */

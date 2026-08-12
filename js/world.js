@@ -17,7 +17,7 @@ for (let i = 0; i < posAttr.count; i++) {
     const ly = posAttr.getY(i);
     const t = Math.max(0, Math.min(1, 0.5 - ly / (WORLD_RADIUS * 2))); // t = 0.0 at neg Z -> 1.0 at pos Z
     _tempColor.copy(colorNeg).lerp(colorPos, t);
-    floorColors[i * 3]     = _tempColor.r;
+    floorColors[i * 3] = _tempColor.r;
     floorColors[i * 3 + 1] = _tempColor.g;
     floorColors[i * 3 + 2] = _tempColor.b;
 }
@@ -47,11 +47,11 @@ function createTallMonolith(x, z) {
     const group = new THREE.Group();
 
     // ── 1. Complex Low-Poly Rock Footer Structure ──
-    const rockMat = new THREE.MeshStandardMaterial({ 
-        color: 0x2b2d3d, 
-        roughness: 0.9, 
-        metalness: 0.1, 
-        flatShading: true 
+    const rockMat = new THREE.MeshStandardMaterial({
+        color: 0x2b2d3d,
+        roughness: 0.9,
+        metalness: 0.1,
+        flatShading: true
     });
 
     // Central Main Base Ring
@@ -99,12 +99,12 @@ function createTallMonolith(x, z) {
 
     // ── 2. Main Obelisk Shaft with Emissive Glowing Insets ──
     const shaftGeo = new THREE.CylinderGeometry(40, 75, 460, 8);
-    const shaftMat = new THREE.MeshStandardMaterial({ 
-        color: 0x4d3e58, 
-        emissive: 0x1a2e47, 
+    const shaftMat = new THREE.MeshStandardMaterial({
+        color: 0x4d3e58,
+        emissive: 0x1a2e47,
         emissiveIntensity: 0.5,
-        roughness: 0.6, 
-        flatShading: true 
+        roughness: 0.6,
+        flatShading: true
     });
     const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
     shaftMesh.position.y = 65 + 230;
@@ -213,4 +213,18 @@ function spawnMonumentGrid() {
 
 // Spawn world assets
 spawnMonumentGrid();
+
+/* ── Simple Flat Square Cloud Object (Casts Shadow) ── */
+const cloudGeo = new THREE.PlaneGeometry(600, 600);
+const cloudMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.9,
+    side: THREE.DoubleSide
+});
+const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+cloudMesh.rotation.x = -Math.PI / 2; // Flat horizontal plane
+cloudMesh.position.set(0, 1700, -2000); // High up in the sky at z = -1000
+cloudMesh.castShadow = true;
+cloudMesh.receiveShadow = false;
+scene.add(cloudMesh);
 

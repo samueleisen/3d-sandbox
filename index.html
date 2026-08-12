@@ -13,24 +13,10 @@
 <body>
 
     <div id="ui-overlay">
-        <div><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
-            Move &nbsp;|&nbsp; <span class="key">Space</span> Jump</div>
-        <div style="margin-top: 2px;">Move or Drag Mouse to Orbit Camera</div>
-        <div id="coords" style="margin-top: 4px; opacity: 0.6;">x: 0 &nbsp; z: 0</div>
-        <div id="perf-hud"
-            style="margin-top: 8px; border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 6px; font-size: 11px; pointer-events: auto;">
-            <div>FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span> &nbsp;|&nbsp; Avg: <span
-                    class="perf-avg">--</span></div>
-            <div>Spike (P99): <span class="perf-spike">--</span> &nbsp;|&nbsp; &Delta;: <span
-                    class="perf-diff">--</span></div>
-            <div style="margin-top: 4px; display: flex; gap: 4px;">
-                <button id="btn-set-baseline"
-                    style="background: rgba(200,255,200,0.15); border: 1px solid rgba(200,255,200,0.3); color: #c8ffc8; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Set
-                    Baseline</button>
-                <button id="btn-reset-baseline"
-                    style="background: rgba(200,255,200,0.1); border: 1px solid rgba(200,255,200,0.2); color: #888; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Reset</button>
-            </div>
+        <div id="perf-hud" style="pointer-events: auto;">
+            FPS: <span class="perf-fps" style="color:#5cf0a0; font-weight:bold;">--</span>
         </div>
+        <div id="coords" style="margin-top: 4px; opacity: 0.8;">x: 0 &nbsp; z: 0</div>
     </div>
 
     <div id="camera-panel">
@@ -83,7 +69,8 @@
         <div class="control-group">
             <label>Grass Density</label>
             <select id="ctrl-grass-density">
-                <option value="40000" selected>Rock-Solid Horizon (80,000 blades)</option>
+                <option value="80000">Rock-Solid Horizon (80,000 blades)</option>
+                <option value="40000">Dense Horizon (40,000 blades)</option>
                 <option value="25000">Dense Horizon (25,000 blades)</option>
                 <option value="10000">Far Horizon (10,000 blades)</option>
                 <option value="0">Off (Disabled)</option>
@@ -91,12 +78,14 @@
         </div>
 
         <div class="control-group" style="border-top: 1px solid rgba(200, 255, 200, 0.15); padding-top: 8px;">
-            <label>Ambient Wind SFX: <span id="wind-audio-status" style="color: #ffb050; float: right;">Click to enable</span></label>
+            <label>Ambient Wind SFX: <span id="wind-audio-status" style="color: #ffb050; float: right;">Click to
+                    enable</span></label>
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
                 <input type="range" id="ctrl-wind-vol" min="0" max="1" step="0.05" value="0.10" style="flex: 1;">
                 <span id="val-wind-vol" class="control-value" style="min-width: 35px; text-align: right;">10%</span>
             </div>
-            <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; user-select: none;">
+            <label
+                style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; user-select: none;">
                 <input type="checkbox" id="ctrl-wind-mute" style="width: auto; cursor: pointer;">
                 Mute Wind SFX
             </label>
@@ -140,7 +129,6 @@
     <script src="js/sky.js"></script>
     <script src="js/cameraFOVHelper.js"></script>
     <script src="js/lightHelper.js"></script>
-    <script src="js/scenePlacement.js"></script>
 
     <!-- Character & Systems -->
     <script src="js/player.js"></script>

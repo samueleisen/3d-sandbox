@@ -1,3 +1,0 @@
-Single Palette Texture Atlas: Instead of 10 different textures for 10 world objects, combine all colors for your props onto a single $256 \times 256\text{ px}$ palette image.
-Baked Ambient Occlusion (AO): If you want a warm, cozy low-poly look without heavy dynamic shadow maps, baking soft shadows in Blender onto static props makes the scene look stunning with 0 rendering cost!
-Draco + KTX2 Workflow: When you start adding 200 KB GLB prop models to your world, running them through Draco compression keeps network downloads ultra-fast just like bruno-simon.com.

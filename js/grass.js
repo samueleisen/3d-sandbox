@@ -370,3 +370,7 @@ function updateGrassPhysics(px, py, pz, dt, time) {
         grassUniforms.uMaxVisDist.value = 2800.0;
     }
 }
+
+// Auto-initialize default grass landscape on script load
+createGrassLandscape(80000);
+
